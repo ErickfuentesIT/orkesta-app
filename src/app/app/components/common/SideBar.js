@@ -1,5 +1,6 @@
 // Sidebar.jsx
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Sidebar({
   projects = [],
@@ -8,12 +9,15 @@ export default function Sidebar({
   onLogout = () => {},
 }) {
   const [open, setOpen] = useState(true); // abre/cierra "Proyectos"
-
+  const router = useRouter();
   return (
     <aside className="sb">
       <nav className="sb__nav">
         {/* Panel */}
-        <button className="sb__item" onClick={() => onSelect("panel")}>
+        <button
+          className="sb__item"
+          onClick={() => router.push("/app/dashboard")}
+        >
           <span className="sb__icon">🏠</span>
           <span className="sb__label">Panel</span>
         </button>

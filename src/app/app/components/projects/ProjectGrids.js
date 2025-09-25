@@ -1,8 +1,10 @@
+"use client";
+
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import Button from "../ui/Button";
 import ProjectCard from "./ProjectCard";
 import StaggerInput from "../ui/StaggerInput";
-import { Link } from "react-router-dom";
 
 export default function ProjectsGrid({
   projects = [],
@@ -17,7 +19,7 @@ export default function ProjectsGrid({
     if (!q) return projects;
     return projects.filter(
       (p) =>
-        p.name.toLowerCase().includes(q) ||
+        p.name?.toLowerCase().includes(q) ||
         (p.owner ?? "").toLowerCase().includes(q)
     );
   }, [projects, query]);
@@ -37,8 +39,8 @@ export default function ProjectsGrid({
             delay={50}
             onChange={handleQuery}
           />
-          <Button className="btn-sweep" onClick={onAdd}>
-            + Agregar Proyecto
+          <Button className="btn-sweep" onClick={() => onAdd(true)}>
+            + Nuevo Proyecto
           </Button>
         </div>
       </header>
@@ -48,10 +50,11 @@ export default function ProjectsGrid({
           <div className="grid">
             {filtered.map((p) => (
               <Link
-                to={`/app/projects/${p.id}`}
+                href={`/app/projects/${p.id}`}
                 className="card-link"
                 key={p.id}
               >
+                {/* Si ProjectCard necesita click propio para editar, pásale onEdit */}
                 <ProjectCard project={p} onEdit={onEdit} />
               </Link>
             ))}

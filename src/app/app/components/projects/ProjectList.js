@@ -1,12 +1,11 @@
-import Button from "../ui/Button";
-import ProjectsGrid from "./ProjectsGrids";
+import ProjectsGrid from "./ProjectGrids";
 
-export default function ProjectList({ projects }) {
+export default function ProjectList({ projects, onClick }) {
   return (
     <div className="project-ly">
       <ProjectsGrid
         projects={projects}
-        onAdd={() => alert("Agregar proyecto")}
+        onAdd={onClick}
         onEdit={(p) => alert("Visualizar: " + p.name)}
       />
     </div>

@@ -5,6 +5,17 @@ import { useCallback, useEffect, useState } from "react";
 const LS_USER_KEY = "simpleAuth.user";
 const LS_LOGGED_KEY = "simpleAuth.logged";
 
+function getStoredUser() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw =
+      localStorage.getItem(LS_USER_KEY) ?? sessionStorage.getItem(LS_USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * BASE de la API:
  * - Opción 1 (recomendada): usa rewrites y llama a /api/... (ver comentario abajo)
@@ -21,7 +32,7 @@ const LOGIN_EP = withBase("/users/login"); // ajusta si tu endpoint es otro
 
 export function useAuth() {
   // ⚠️ SSR-safe: no toques localStorage en el render inicial
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(getStoredUser); // ⬅️ importante
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -136,6 +147,20 @@ export function useAuth() {
     (typeof window !== "undefined" &&
       (localStorage.getItem(LS_LOGGED_KEY) === "true" ||
         sessionStorage.getItem(LS_LOGGED_KEY) === "true"));
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (user) {
+      localStorage.setItem(LS_USER_KEY, JSON.stringify(user));
+      localStorage.setItem(LS_LOGGED_KEY, "true");
+      sessionStorage.setItem(LS_LOGGED_KEY, "true");
+    } else {
+      localStorage.removeItem(LS_USER_KEY);
+      localStorage.removeItem(LS_LOGGED_KEY);
+      sessionStorage.removeItem(LS_USER_KEY);
+      sessionStorage.removeItem(LS_LOGGED_KEY);
+    }
+  }, [user]);
 
   return { user, loading, error, login, logout, isAuthenticated };
 }
