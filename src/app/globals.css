@@ -40,3 +40,553 @@ a {
     color-scheme: dark;
   }
 }
+
+/*BORRAR ARRIBA */
+
+* {
+  padding: 0;
+  margin: 0;
+}
+
+:root {
+  --btn-fill: #10b981; /* color principal */
+  --seconday: #334133;
+  --bg: #faf7f2;
+  --text: #0f172a;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --ring: rgba(16, 185, 129, 0.25);
+  --info: #0ea5e9;
+  --box-border: #34d399; /* borde verde claro del contenedor */
+  --box-bg: #ecfdf5; /* fondo suave del contenedor */
+
+  --sb-bg: #2c3948;
+  --sb-fg: #e6eef6;
+  --sb-muted: #b7c3cf;
+  --sb-accent: #17c6a3; /* verde activo */
+  --sb-hover: rgba(255, 255, 255, 0.08);
+  --radius: 10px;
+}
+
+/*LOGIN - REGISTER */
+.wrapper {
+  display: flex;
+  min-height: 100dvh;
+  gap: 1rem;
+}
+
+.left {
+  flex: 0 0 35%;
+  background-color: #111827;
+}
+
+.left > section {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvb;
+  justify-content: center;
+  align-items: center;
+}
+
+.right {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Centrado de la tarjeta (opcional) */
+html,
+body {
+  height: 100%;
+  font-family: "Nunito Sans", sans-serif;
+}
+.login-wrap {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  gap: 2rem;
+}
+
+/* Grid del formulario */
+.form-grid {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 22rem); /* Etiqueta | Campo */
+  gap: 1rem 1rem;
+  align-items: center;
+}
+
+/* Filas que deben ocupar ambas columnas */
+.grid-column-2 {
+  grid-column: 2;
+}
+
+/* Estilos rápidos */
+input[type="text"],
+input[type="password"],
+input[type="email"] {
+  width: 20.5rem;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  outline: none;
+}
+input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px #10b98133;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Estilo boton con sweep */
+
+.btn-sweep {
+  position: relative;
+  isolation: isolate; /* crea contexto para z-index */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.6rem;
+  border: 2px solid var(--btn-fill);
+  background: transparent;
+  color: var(--btn-fill);
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+/* LOGIN / REGISTER BUTTON */
+.login-wrap .btn-sweep {
+  width: 45%;
+}
+
+.card .btn-sweep {
+  width: 25%;
+}
+
+.btn-sweep::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1; /* queda detrás del texto */
+  background: var(--btn-fill);
+  transform: scaleX(0); /* empieza vacío */
+  transform-origin: left; /* avanza de izquierda a derecha */
+  transition: transform 0.35s ease;
+}
+
+.btn-sweep > span {
+  position: relative;
+  z-index: 1;
+}
+
+.btn-sweep:hover,
+.btn-sweep:focus-visible {
+  color: #fff;
+  border-color: var(--btn-fill);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--btn-fill), transparent 75%);
+  outline: none;
+}
+
+.btn-sweep:hover::before,
+.btn-sweep:focus-visible::before {
+  transform: scaleX(1); /* llena completo */
+}
+
+.btn-sweep:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-sweep,
+  .btn-sweep::before {
+    transition: none !important;
+  }
+}
+
+.muted {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+.muted a {
+  color: #0ea5e9;
+  text-decoration: underline;
+}
+
+/* Móvil: colapsa a una sola columna */
+@media (max-width: 480px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-grid > label {
+    margin-top: 0.25rem;
+  }
+}
+
+/* Sección de validación de login / register */
+
+.form-validations {
+  background-color: #fee2e2; /* rojo muy claro */
+  border: 1px solid #ef4444; /* rojo base */
+  color: #991b1b; /* rojo oscuro para el texto */
+  border-radius: 0.5rem; /* esquinas más suaves */
+  padding: 1rem 1.25rem;
+  margin-top: 1rem;
+  font-size: 0.875rem; /* texto más pequeño */
+  line-height: 1.25rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* un poco de sombra */
+}
+
+.form-validations ul {
+  margin: 0.25rem 0;
+  padding-left: 1.25rem;
+  list-style-type: disc; /* bullets para lista clara */
+}
+
+.form-validations small {
+  display: block;
+}
+
+/* Layout general styles */
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* NavBar styles */
+
+.navBar {
+  display: flex;
+  justify-content: space-between;
+  background-color: #111827;
+  color: white;
+  padding: 1rem 2rem;
+}
+
+/* Content from layout styles */
+.content-ly {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 20%;
+  background-color: #334155;
+  border-top: 1px solid white;
+}
+
+.project-ly {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2rem;
+  align-items: center;
+}
+
+.option-bar {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Projects */
+
+.admin {
+  max-width: 100%;
+  width: 100%;
+  color: black;
+}
+
+.admin__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin__title {
+  font-size: 25px;
+}
+
+.admin__tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Caja contenedora de proyectos */
+.admin__box {
+  border: 2px solid var(--box-border);
+  background: color-mix(in srgb, var(--box-bg) 80%, white 20%);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+/* Grid de tarjetas */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1px 12px;
+  align-items: center;
+  justify-items: center;
+}
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Estado vacío */
+.empty {
+  display: grid;
+  place-items: center;
+  padding: 48px 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Soporte fallback si color-mix no está */
+@supports not (background: color-mix(in srgb, white, black)) {
+  .admin__box {
+    background: var(--box-bg);
+  }
+}
+
+/* From Uiverse.io by ElSombrero2, CARDS DE PROYECTOS */
+.card {
+  width: 90%;
+  height: 70%;
+  aspect-ratio: 16 / 9;
+  background: #111827;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0px 0px 3px 1px #00000088;
+  cursor: pointer;
+  padding: 1.5rem 0.5rem;
+  border-radius: 0.75rem;
+}
+
+/* el grid item real es el <Link> */
+.card-link {
+  display: block; /* ← evita el comportamiento inline */
+  width: 100%;
+  height: 100%;
+  text-decoration: none; /* quita subrayado */
+  color: inherit; /* hereda color del card */
+}
+
+.card .content {
+  border-radius: 12px;
+  background: #111827;
+  width: 90%;
+  height: 95%;
+  z-index: 1;
+  padding: 20px;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.content::before {
+  opacity: 0;
+  transition: opacity 300ms;
+  content: " ";
+  display: block;
+  background: white;
+  width: 10px;
+  height: 50px;
+  position: absolute;
+  filter: blur(50px);
+  overflow: hidden;
+}
+
+.card:hover .content::before {
+  opacity: 1;
+}
+
+.card::before {
+  opacity: 0;
+  content: " ";
+  position: absolute;
+  display: block;
+  width: 800px;
+  height: 200px;
+  background: linear-gradient(#10b981, #387ef0);
+  transition: opacity 300ms;
+  animation: rotation_9018 6000ms infinite linear;
+  animation-play-state: paused;
+}
+
+.card:hover::before {
+  opacity: 1;
+  animation-play-state: running;
+}
+
+.card::after {
+  position: absolute;
+  content: " ";
+  display: block;
+  width: 550px;
+  height: 360px;
+  background: #17171733;
+  backdrop-filter: blur(50px);
+}
+
+@keyframes rotation_9018 {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* From Uiverse.io by liyaxu123, STAGGER INPUT COMPONENT */
+.form-control {
+  position: relative;
+  width: 350px; /* cámbialo según tu layout */
+}
+
+.form-control input {
+  background-color: transparent;
+  border: 0;
+  border-bottom: 2px black solid;
+  display: block;
+  width: 90%;
+  font-size: 18px;
+  color: black;
+  border-radius: 0px;
+}
+
+/* foco */
+.form-control:focus-within input {
+  outline: 0;
+  border-bottom-color: black;
+}
+
+.form-control label {
+  position: absolute;
+  top: 15px;
+  left: 5px;
+  pointer-events: none;
+}
+
+.form-control label span {
+  display: inline-block;
+  font-size: 18px;
+  min-width: 5px;
+  color: black;
+  transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55), color 0.3s,
+    opacity 0.3s;
+  opacity: 0.95;
+}
+
+/* mover letras cuando hay foco o texto */
+.form-control:focus-within label span,
+.form-control input:not(:placeholder-shown) + label span {
+  color: var(--seconday);
+  transform: translateY(-35px);
+  opacity: 1;
+}
+
+/* SIDEBAR */
+
+.sb {
+  width: 20%;
+  height: auto;
+  background: var(--sb-bg);
+  color: var(--sb-fg);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 12px;
+}
+
+.sb__nav {
+  flex: 1;
+}
+
+.sb__item,
+.sb__logout {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px 1fr 18px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.sb__item:hover,
+.sb__logout:hover {
+  background: var(--sb-hover);
+}
+
+.sb__icon {
+  opacity: 0.9;
+}
+.sb__label {
+  text-align: left;
+}
+
+.sb__chev {
+  transform: rotate(90deg);
+  transition: transform 0.2s ease;
+  opacity: 0.8;
+}
+.sb__chev.is-open {
+  transform: rotate(0deg);
+}
+
+/* Sublista */
+.sb__list {
+  list-style: none;
+  margin: 6px 0 10px 0;
+  padding-left: 36px;
+  display: grid;
+  gap: 6px;
+}
+
+.sb__subitem {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--sb-fg);
+  border: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.sb__subitem:hover {
+  background: var(--sb-hover);
+}
+
+/* Activo */
+.sb__subitem.is-active {
+  background: var(--sb-accent);
+  color: #083b34;
+  font-weight: 600;
+}
+
+/* Footer botón */
+.sb__logout {
+  margin-top: auto;
+}
