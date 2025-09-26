@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { createProject, assignUserToProject } from "@/services/projects";
+import {
+  createProject,
+  assignUserToProject,
+  updateProject,
+} from "@/services/projects";
+import { fetchAllUsers } from "@/services/users";
 
 function getStoredUserId() {
   if (typeof window === "undefined") return null;
@@ -17,7 +22,21 @@ function getStoredUserId() {
   }
 }
 
-export default function AddProjectForm({ onCreated, onCancel }) {
+/**
+ * Props:
+ * - mode: 'create' | 'edit'
+ * - initial: { idProject, project, description, createdDate, projectStatus }
+ * - onCreated?: (created) => void
+ * - onUpdated?: (updated) => void
+ * - onCancel?: () => void
+ */
+export default function AddProjectForm({
+  mode = "create",
+  initial,
+  onCreated,
+  onUpdated,
+  onCancel,
+}) {
   const {
     register,
     handleSubmit,
@@ -27,48 +46,123 @@ export default function AddProjectForm({ onCreated, onCancel }) {
     defaultValues: {
       project: "",
       description: "",
-      createdDate: new Date().toISOString().slice(0, 16), // yyyy-MM-ddTHH:mm (para input datetime-local)
+      createdDate: new Date().toISOString().slice(0, 16), // yyyy-MM-ddTHH:mm
       projectStatus: true,
     },
-    mode: "onSubmit",
   });
 
   const [submitError, setSubmitError] = useState(null);
 
+  // --- NUEVO: usuarios y selección (solo en edición)
+  const [users, setUsers] = useState([]); // [{idUser,userName,email,...}]
+  const [query, setQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState(new Set()); // ids de usuarios a asignar como miembros
+
+  // precarga valores del formulario al editar
+  useEffect(() => {
+    if (!initial) return;
+    reset({
+      project: initial.project ?? "",
+      description: initial.description ?? "",
+      createdDate: initial.createdDate
+        ? new Date(initial.createdDate).toISOString().slice(0, 16)
+        : new Date().toISOString().slice(0, 16),
+      projectStatus: Boolean(initial.projectStatus),
+    });
+  }, [initial, reset]);
+
+  // carga de usuarios (solo en modo edición)
+  useEffect(() => {
+    if (mode !== "edit") return;
+    const ac = new AbortController();
+    fetchAllUsers({ signal: ac.signal })
+      .then(setUsers)
+      .catch((e) => console.error("fetchAllUsers error", e));
+    return () => ac.abort();
+  }, [mode]);
+
+  // filtrar por userName o email
+  const filteredUsers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(
+      (u) =>
+        (u.userName ?? "").toLowerCase().includes(q) ||
+        (u.email ?? "").toLowerCase().includes(q)
+    );
+  }, [users, query]);
+
+  function toggleUser(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   const onSubmit = async (values) => {
     setSubmitError(null);
-
-    const userId = getStoredUserId();
-    if (!userId) {
-      setSubmitError("No se encontró el usuario en el almacenamiento.");
-      return;
-    }
-
-    // Ajusta createdDate a ISO completo si vienes de <input type="datetime-local">
     const isoDate = values.createdDate
       ? new Date(values.createdDate).toISOString()
       : new Date().toISOString();
 
-    const payload = {
-      idOwnerUser: { idUser: Number(userId) }, // 👈 desde localStorage
+    // ----- EDICIÓN -----
+    if (mode === "edit") {
+      if (!initial?.idProject) {
+        setSubmitError("Falta idProject para editar.");
+        return;
+      }
+      const updatePayload = {
+        project: values.project.trim(),
+        description: values.description.trim(),
+        createdDate: isoDate,
+        projectStatus: Boolean(values.projectStatus),
+      };
+
+      try {
+        const updated = await updateProject(initial.idProject, updatePayload);
+
+        // Asignar miembros seleccionados (rol 2)
+        const assignPromises = Array.from(selectedIds).map((uid) =>
+          assignUserToProject({
+            userId: uid,
+            projectId: initial.idProject,
+            roleId: 2,
+          })
+        );
+        if (assignPromises.length) {
+          await Promise.allSettled(assignPromises);
+        }
+
+        onUpdated?.(updated);
+      } catch (e) {
+        setSubmitError(e.message || "No se pudo actualizar/asignar miembros");
+      }
+      return;
+    }
+
+    // ----- CREACIÓN -----
+    const ownerId = getStoredUserId();
+    if (!ownerId) {
+      setSubmitError("No se encontró el usuario en el almacenamiento.");
+      return;
+    }
+    const createPayload = {
+      idOwnerUser: { idUser: Number(ownerId) },
       project: values.project.trim(),
       description: values.description.trim(),
       createdDate: isoDate,
       projectStatus: Boolean(values.projectStatus),
     };
-
     try {
-      const created = await createProject(payload);
+      const created = await createProject(createPayload);
       const projectId = created?.idProject;
-      if (!projectId) {
-        setSubmitError("No se ha retornado el ID del proyecto");
-        return;
-      }
-      await assignUserToProject({ userId, projectId, roleId: 1 });
-      console.log(created);
+
+      // Asignación del creador como admin ya la haces aparte si quieres,
+      // aquí solo avisamos que se creó
       onCreated?.(created);
       reset();
-      // notifica al padre para refrescar la lista
     } catch (e) {
       setSubmitError(e.message || "No se pudo crear el proyecto");
     }
@@ -109,7 +203,7 @@ export default function AddProjectForm({ onCreated, onCancel }) {
       )}
 
       <label htmlFor="createdDate" className="muted">
-        Fecha de creación:
+        Fecha:
       </label>
       <input
         id="createdDate"
@@ -127,13 +221,82 @@ export default function AddProjectForm({ onCreated, onCancel }) {
         </label>
       </div>
 
-      <div className="grid-column-2" style={{ display: "flex", gap: 12 }}>
+      {/* ------- NUEVO: Picker de miembros (solo en edición) ------- */}
+      {mode === "edit" && (
+        <div className="grid-column-2" style={{ marginTop: 12 }}>
+          <h3 className="muted" style={{ marginBottom: 8 }}>
+            Agregar miembros
+          </h3>
+
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <input
+              type="text"
+              placeholder="Buscar por nombre o email…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ flex: 1 }}
+            />
+          </div>
+
+          <div
+            style={{
+              maxHeight: 220,
+              overflow: "auto",
+              border: "1px solid #ddd",
+              borderRadius: 6,
+              padding: 8,
+            }}
+          >
+            {filteredUsers.length === 0 && (
+              <div className="muted">No hay usuarios que coincidan.</div>
+            )}
+
+            {filteredUsers.map((u) => (
+              <label
+                key={u.idUser}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "6px 4px",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(u.idUser)}
+                  onChange={() => toggleUser(u.idUser)}
+                />
+                <span>{u.userName}</span>
+                <span
+                  className="muted"
+                  style={{ marginLeft: "auto", fontSize: 12 }}
+                >
+                  {u.email}
+                </span>
+              </label>
+            ))}
+          </div>
+          <small className="muted" style={{ display: "block", marginTop: 6 }}>
+            Al guardar cambios se asignarán como <b>miembros</b> (rol 2).
+          </small>
+        </div>
+      )}
+
+      <div
+        className="grid-column-2"
+        style={{ display: "flex", gap: 12, marginTop: 12 }}
+      >
         <button className="btn-sweep" type="submit" disabled={isSubmitting}>
-          <span>{isSubmitting ? "Creando..." : "Crear proyecto"}</span>
+          {isSubmitting
+            ? "Guardando..."
+            : mode === "edit"
+            ? "Guardar cambios"
+            : "Crear proyecto"}
         </button>
         {onCancel && (
           <button type="button" className="btn-sweep" onClick={onCancel}>
-            <span>Cancelar</span>
+            Cancelar
           </button>
         )}
       </div>

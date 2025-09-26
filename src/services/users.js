@@ -52,3 +52,24 @@ export async function registerUser({
     return true;
   }
 }
+
+/** GET /users/all */
+export async function fetchAllUsers({ signal } = {}) {
+  const resp = await fetch(withBase("/users/all"), {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    signal,
+    cache: "no-store",
+  });
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try {
+      const j = await resp.json();
+      msg = j?.message || msg;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
+  return resp.json(); // [{idUser,userName,email,...}, ...]
+}

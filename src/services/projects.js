@@ -96,11 +96,17 @@ export async function createProject(payload) {
   return resp.json().catch(() => ({}));
 }
 
+// src/services/projects.js
 export async function assignUserToProject({ userId, projectId, roleId = 1 }) {
+  const API_BASE =
+    process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || "";
+  const withBase = (p) =>
+    `${API_BASE.replace(/\/$/, "")}${p.startsWith("/") ? p : `/${p}`}`;
+
   const payload = {
     idUser: { idUser: Number(userId) },
     projects: { idProject: Number(projectId) },
-    idRole: { idRole: Number(roleId) }, // 1 = Administrador
+    idRole: { idRole: Number(roleId) }, // 1 admin, 2 miembro
   };
 
   const resp = await fetch(withBase("/users-projects"), {
@@ -111,19 +117,105 @@ export async function assignUserToProject({ userId, projectId, roleId = 1 }) {
   });
 
   if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    console.error("ASSIGN FAIL", {
-      url: withBase("/user-projects"),
-      status: resp.status,
-      payload,
-      body: text,
-    });
-    // intenta parsear un message
     let msg = `HTTP ${resp.status}`;
     try {
-      msg = JSON.parse(text)?.message || JSON.parse(text)?.error || msg;
-    } catch {}
+      const j = await resp.json();
+      msg = j?.message || j?.error || msg;
+    } catch {
+      /* ignore */
+    }
     throw new Error(msg);
   }
+  return resp.json().catch(() => ({}));
+}
+
+// --- GET /project/{id} ---
+export async function fetchProjectById(projectId, { signal } = {}) {
+  const API_BASE =
+    process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || "";
+  const withBase = (p) =>
+    `${API_BASE.replace(/\/$/, "")}${p.startsWith("/") ? p : `/${p}`}`;
+
+  const resp = await fetch(
+    withBase(`/projects/${encodeURIComponent(projectId)}`),
+    {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal,
+      cache: "no-store",
+    }
+  );
+
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try {
+      const j = await resp.json();
+      msg = j?.message || msg;
+    } catch {
+      try {
+        msg = (await resp.text()) || msg;
+      } catch {}
+    }
+    throw new Error(msg);
+  }
+
+  // Devuelve tal cual (tu back ya trae los campos del form)
+  return resp.json();
+}
+
+// --- PUT /project/{id} --- (ajusta a tu EP si fuera /projects/{id})
+export async function updateProject(projectId, payload) {
+  const API_BASE =
+    process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || "";
+  const withBase = (p) =>
+    `${API_BASE.replace(/\/$/, "")}${p.startsWith("/") ? p : `/${p}`}`;
+
+  // Obtener idUser desde localStorage/sessionStorage (igual que al crear)
+  let userId = null;
+  if (typeof window !== "undefined") {
+    try {
+      const raw =
+        localStorage.getItem("simpleAuth.user") ??
+        sessionStorage.getItem("simpleAuth.user");
+      const parsed = raw ? JSON.parse(raw) : null;
+      userId = parsed?.id ?? parsed?.idUser ?? parsed?.userId ?? null;
+    } catch {}
+  }
+
+  // Armar payload final para tu backend
+  const body = {
+    idOwnerUser: { idUser: Number(userId) }, // 👈 obligatorio
+    project: payload.project,
+    description: payload.description,
+    createdDate: payload.createdDate, // en ISO string
+    projectStatus: Boolean(payload.projectStatus),
+  };
+
+  const resp = await fetch(
+    withBase(`/projects/${encodeURIComponent(projectId)}`),
+    {
+      method: "PATCH", // 👈 asegúrate que tu backend soporta PATCH; si no, usa PUT
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    }
+  );
+
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try {
+      const j = await resp.json();
+      msg = j?.message || msg;
+    } catch {
+      try {
+        msg = (await resp.text()) || msg;
+      } catch {}
+    }
+    throw new Error(msg);
+  }
+
   return resp.json().catch(() => ({}));
 }

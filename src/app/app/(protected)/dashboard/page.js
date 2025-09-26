@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
+import { fetchProjectById } from "@/services/projects";
 import SideBar from "../../components/common/SideBar";
 import ProjectList from "../../components/projects/ProjectList";
 import AddProjectForm from "../../components/projects/AddProjectForm";
@@ -12,7 +12,7 @@ import { useAuth } from "@/services/useAuth";
 export default function DashboardPage() {
   const [isProject, setIsProject] = useState(true);
   const [showForm, setShowForm] = useState(false);
-
+  const [editData, setEditData] = useState(null);
   const { projects, loading, error, refetch } = useProjects();
   const { logout } = useAuth();
   const router = useRouter();
@@ -21,6 +21,17 @@ export default function DashboardPage() {
     logout();
     router.replace("/app/login");
   };
+
+  async function handleEdit(projectId) {
+    try {
+      const data = await fetchProjectById(projectId);
+      setEditData(data); // { idProject, project, description, createdDate, projectStatus, ... }
+      setShowForm(true); // abre overlay
+    } catch (e) {
+      console.error("fetchProjectById error", e);
+      // opcional: muestra toast/alert
+    }
+  }
 
   return (
     <div className="layout">
@@ -42,25 +53,46 @@ export default function DashboardPage() {
             <div className="p-4 text-red-600">Error: {String(error)}</div>
           )}
           {!loading && !error && isProject && (
-            <ProjectList projects={projects} onClick={setShowForm} />
+            <ProjectList
+              projects={projects}
+              onClick={setShowForm}
+              onEdit={handleEdit}
+            />
           )}
         </div>
       </div>
 
       {/* Overlay con el formulario */}
       {showForm && (
-        <div className="overlay" onClick={() => setShowForm(false)}>
-          <div
-            className="overlay-content"
-            onClick={(e) => e.stopPropagation()} // evita cerrar al dar click dentro
-          >
-            <h2 style={{ marginBottom: "1rem" }}>Crear nuevo proyecto</h2>
+        <div
+          className="overlay"
+          onClick={() => {
+            setShowForm(false);
+            setEditData(null);
+          }}
+        >
+          <div className="overlay-content" onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ marginBottom: 12 }}>
+              {editData ? "Editar proyecto" : "Crear proyecto"}
+            </h2>
+
             <AddProjectForm
-              onCreated={(created) => {
-                refetch(); // vuelve a pedir /projects/all-user/:id
-                setShowForm(false); // cierra overlay
+              mode={editData ? "edit" : "create"}
+              initial={editData || undefined}
+              onUpdated={() => {
+                refetch();
+                setShowForm(false);
+                setEditData(null);
               }}
-              onCancel={() => setShowForm(false)}
+              onCreated={() => {
+                refetch();
+                setShowForm(false);
+                setEditData(null);
+              }}
+              onCancel={() => {
+                setShowForm(false);
+                setEditData(null);
+              }}
             />
           </div>
         </div>
