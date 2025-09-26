@@ -62,8 +62,7 @@ body {
   place-content: center;
   gap: 2rem;
 }
-
-/* Grid del formulario */
+/* Grid de  */
 .form-grid {
   display: grid;
   grid-template-columns: max-content minmax(0, 22rem); /* Etiqueta | Campo */
@@ -76,10 +75,25 @@ body {
   grid-column: 2;
 }
 
+/* Flex del formulario */
+.form-flex {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.flex-center {
+  width: 100%;
+  justify-content: center;
+}
+
 /* Estilos rápidos */
 input[type="text"],
 input[type="password"],
-input[type="email"] {
+input[type="email"],
+input[type="datetime-local"] {
   width: 20.5rem;
   height: 2.25rem;
   padding: 0 0.75rem;
@@ -380,8 +394,8 @@ input:focus {
   content: " ";
   position: absolute;
   display: block;
-  width: 800px;
-  height: 200px;
+  width: 600px;
+  height: 100px;
   background: linear-gradient(#10b981, #387ef0);
   transition: opacity 300ms;
   animation: rotation_9018 6000ms infinite linear;
@@ -569,7 +583,7 @@ input:focus {
   align-items: center;
   background: #fff;
   border-radius: 8px;
-  width: 50%; /* 👈 ocupa 65% de ancho */
+  width: 35%; /* 👈 ocupa 65% de ancho */
   max-width: 1000px; /* límite opcional */
   padding: 24px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);

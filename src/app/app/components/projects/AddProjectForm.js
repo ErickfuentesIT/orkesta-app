@@ -159,6 +159,14 @@ export default function AddProjectForm({
       const created = await createProject(createPayload);
       const projectId = created?.idProject;
 
+      // 🔑 ASIGNAR AL CREADOR COMO ADMIN (rol 1):
+      if (projectId && ownerId) {
+        await assignUserToProject({
+          userId: ownerId,
+          projectId,
+          roleId: 1, // admin
+        });
+      }
       // Asignación del creador como admin ya la haces aparte si quieres,
       // aquí solo avisamos que se creó
       onCreated?.(created);
@@ -169,7 +177,7 @@ export default function AddProjectForm({
   };
 
   return (
-    <form className="form-grid" onSubmit={handleSubmit(onSubmit)}>
+    <form className="form-flex" onSubmit={handleSubmit(onSubmit)}>
       <label htmlFor="project" className="muted">
         Nombre del proyecto:
       </label>
@@ -284,7 +292,7 @@ export default function AddProjectForm({
       )}
 
       <div
-        className="grid-column-2"
+        className="flex-center"
         style={{ display: "flex", gap: 12, marginTop: 12 }}
       >
         <button className="btn-sweep" type="submit" disabled={isSubmitting}>

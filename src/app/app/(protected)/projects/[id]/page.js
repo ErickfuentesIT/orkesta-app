@@ -1,23 +1,20 @@
 "use client";
-
 import React from "react";
 import { useRouter } from "next/navigation";
 import SideBar from "@/app/app/components/common/SideBar";
-import ProjectList from "@/app/app/components/projects/ProjectList";
+import TaskList from "@/app/app/components/tasks/TaskList";
+import { useTasks } from "@/services/useTasks";
 
 export default function ProjectTaskPage({ params }) {
-  // En Next los params vienen por props, no con useParams()
-  const { id } = React.use(params);
+  const { id } = React.use(params); // Next 15: unwrap
   const router = useRouter();
+  const { tasks, loading, error, refetch } = useTasks(id);
 
-  const handleSelect = (pid) => {
-    // navegar a otro proyecto
-    router.push(`/app/projects/${pid}`);
-  };
-
-  const handleLogout = () => {
-    // aquí invoca tu logout real si quieres
-    router.replace("/app/login");
+  const handleSelect = (pid) => router.push(`/app/projects/${pid}`);
+  const handleLogout = () => router.replace("/app/login");
+  const handleEditTask = (taskId) => {
+    // abrir modal de edición (cuando lo agregues)
+    console.log("editar tarea", taskId);
   };
 
   return (
@@ -28,7 +25,15 @@ export default function ProjectTaskPage({ params }) {
           onSelect={handleSelect}
           onLogout={handleLogout}
         />
-        <ProjectList /* puedes pasar props si hace falta */ />
+        <div style={{ flex: 1, padding: 16 }}>
+          {loading && <div className="p-4">Cargando tareas…</div>}
+          {error && (
+            <div className="p-4 text-red-600">Error: {String(error)}</div>
+          )}
+          {!loading && !error && (
+            <TaskList tasks={tasks} onEdit={handleEditTask} />
+          )}
+        </div>
       </div>
     </div>
   );

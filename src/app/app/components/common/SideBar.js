@@ -13,6 +13,7 @@ export default function Sidebar({
   return (
     <aside className="sb">
       <nav className="sb__nav">
+        <span>Orkesta</span>
         {/* Panel */}
         <button
           className="sb__item"
