@@ -51,7 +51,7 @@ export default function TaskList({ tasks = [], onEdit }) {
             ))}
           </div>
         ) : (
-          <div className="empty">No hay tareas que coincidan.</div>
+          <div className="empty">Este proyecto aún no tiene tareas.</div>
         )}
       </div>
     </section>
