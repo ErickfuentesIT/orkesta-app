@@ -1,6 +1,7 @@
 // src/services/tasks.js
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || "";
+const ASSIGNEE_FIELD = "assignedTo"; // ej: "assignedTo", "assignee", "responsable", "idUserAssigned"
 
 const withBase = (p) =>
   `${API_BASE.replace(/\/$/, "")}${p.startsWith("/") ? p : `/${p}`}`;
@@ -18,6 +19,11 @@ export async function fetchTasksByProject(projectId, { signal } = {}) {
   );
 
   if (!resp.ok) {
+    if (resp.status === 404) {
+      // opcional: loguear el body
+      // const txt = await resp.text().catch(()=> "");
+      return [];
+    }
     // 👇 Backend devuelve 500 cuando no hay tareas -> trátalo como vacío
     if (resp.status === 500) {
       // opcional: inspecciona el body por si quieres confirmar el path
@@ -32,19 +38,23 @@ export async function fetchTasksByProject(projectId, { signal } = {}) {
   const raw = await resp.json();
 
   return (Array.isArray(raw) ? raw : []).map((t) => {
-    const statusText = t?.status?.status ?? null;
     const statusId = t?.status?.idStatus ?? null;
-    const done = statusText === "2" || statusId === 2;
+    // Si viene objeto de asignación, intenta extraer idUser
+    const assignedUserId =
+      t?.assigment?.idUser?.idUser ??
+      t?.assigment?.idUserId ?? // por si el back trae otra forma
+      null;
     return {
       id: t.tasks,
       projectId: t?.idProjects?.idProject ?? null,
       title: t?.name ?? `Tarea #${t.tasks}`,
       description: t?.description ?? "",
-      done,
       statusId,
-      statusText,
+      statusText: t?.status?.status ?? null,
       startAt: t?.plannedStartDate ?? null,
       endAt: t?.plannedEndDate ?? null,
+      assignedUserId, // 👈 NUEVO
+      isAssigned: Boolean(t?.assigment), // null -> false, objeto -> true
       _raw: t,
     };
   });
@@ -102,10 +112,41 @@ export async function updateTask(taskId, payload) {
   const withBase = (p) =>
     `${API_BASE.replace(/\/$/, "")}${p.startsWith("/") ? p : `/${p}`}`;
 
+  const {
+    projectId, // opcional si no viene en payload.idProjects
+    assignedUserId, // 👈 NUEVO: id del usuario asignado (number)
+    name,
+    description,
+    statusId,
+    plannedStartDate,
+    plannedEndDate,
+  } = payload;
+
+  const body = {
+    idProjects: {
+      idProject: Number(projectId ?? payload?.idProjects?.idProject),
+    },
+    name,
+    status: { idStatus: Number(statusId ?? payload?.status?.idStatus) },
+    description,
+    plannedStartDate,
+    plannedEndDate,
+  };
+
+  // 👇 Añadimos el asignado SOLO si hay valor
+  if (assignedUserId != null) {
+    // estructura por defecto:
+    body[ASSIGNEE_FIELD] = { idUser: Number(assignedUserId) };
+
+    // Si tu backend espera otro nombre además, descomenta UNO y prueba:
+    // body.assignee = { idUser: Number(assignedUserId) };
+    // body.idUserAssigned = { idUser: Number(assignedUserId) };
+  }
+
   const resp = await fetch(withBase(`/tasks/${encodeURIComponent(taskId)}`), {
     method: "PATCH",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
     cache: "no-store",
   });
 

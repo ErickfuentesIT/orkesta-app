@@ -1,4 +1,5 @@
 "use client";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from "../ui/Button";
@@ -35,6 +36,7 @@ export default function FirstForm({ title = "Form title", isLogin = true }) {
   }) => {
     const email = username.trim();
 
+    // ----- REGISTRO -----
     if (!isLogin) {
       if (password !== confirmPassword) {
         setError("confirmPassword", {
@@ -44,12 +46,15 @@ export default function FirstForm({ title = "Form title", isLogin = true }) {
         return;
       }
       try {
+        // 1) Crear usuario
         await registerUser({
           userName: name?.trim() || email,
           email,
           password,
           userStatus: 1,
         });
+
+        // 2) Auto-login y redirección
         const res = await login({ email, password, remember });
         router.replace(res.ok ? "/app/dashboard" : "/app/login");
         return;
@@ -62,14 +67,15 @@ export default function FirstForm({ title = "Form title", isLogin = true }) {
       }
     }
 
-    // Login
+    // ----- LOGIN -----
     const res = await login({ email, password, remember });
     if (res.ok) router.replace("/app/dashboard");
-    else
+    else {
       setError("root", {
         type: "manual",
         message: res.message || "Credenciales inválidas, intente nuevamente",
       });
+    }
   };
 
   return (
@@ -144,7 +150,11 @@ export default function FirstForm({ title = "Form title", isLogin = true }) {
           </>
         )}
 
-        <div className="grid-column-2">
+        {/* En registro puedes ocultar "Recordarme" si prefieres */}
+        <div
+          className="grid-column-2"
+          style={{ display: isLogin ? "block" : "none" }}
+        >
           <label className="check">
             <input id="remember" type="checkbox" {...register("remember")} />
             <span className="muted">Recordarme</span>

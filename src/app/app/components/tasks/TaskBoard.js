@@ -68,7 +68,7 @@ export default function TaskBoard({ tasks = [], onEdit }) {
                     width: 6,
                     height: 6,
                     borderRadius: 9999,
-                    background: "#ff3b3b",
+                    background: "black",
                   }}
                 />
                 <span
@@ -76,7 +76,7 @@ export default function TaskBoard({ tasks = [], onEdit }) {
                     width: 6,
                     height: 6,
                     borderRadius: 9999,
-                    background: "#ff3b3b",
+                    background: "black",
                   }}
                 />
                 <span
@@ -84,7 +84,7 @@ export default function TaskBoard({ tasks = [], onEdit }) {
                     width: 6,
                     height: 6,
                     borderRadius: 9999,
-                    background: "#ff3b3b",
+                    background: "black",
                   }}
                 />
               </button>
@@ -96,6 +96,7 @@ export default function TaskBoard({ tasks = [], onEdit }) {
                 {" → "}
                 {end ? new Date(end).toLocaleDateString() : "Sin fin"}
               </small>
+              {t.isAssigned && <small className="muted">Asignada</small>}
             </div>
           );
         })
@@ -103,7 +104,9 @@ export default function TaskBoard({ tasks = [], onEdit }) {
     </div>
   );
 
-  return (
+  return tasks.length === 0 ? (
+    <div className="empty">Este proyecto aún no tiene tareas</div>
+  ) : (
     <div className="task-board">
       <Col title="Pendiente" list={pending} />
       <Col title="Haciendo" list={doing} />

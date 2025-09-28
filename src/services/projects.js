@@ -29,15 +29,19 @@ export async function fetchProjectsByUser(userId, { signal } = {}) {
   const resp = await fetch(url, {
     method: "GET",
     headers: { Accept: "application/json" },
-    // credentials: 'include', // <-- descomenta si tu backend usa cookies
     signal,
-    cache: "no-store", // evita cache agresivo del fetch en Next
+    cache: "no-store",
   });
 
   if (!resp.ok) {
+    // 👇 si el back usa 500 para "sin proyectos", devuélvelo como []
+    if (resp.status === 500) {
+      // opcional: podrías leer el body por logging
+      // const txt = await resp.text().catch(()=> "");
+      return [];
+    }
     let msg = `Error HTTP ${resp.status}`;
     try {
-      // intenta usar JSON { message } si tu API lo envía
       const j = await resp.json();
       msg = j?.message || msg;
     } catch {
@@ -51,7 +55,6 @@ export async function fetchProjectsByUser(userId, { signal } = {}) {
 
   const raw = await resp.json();
 
-  // 🔑 Mapeamos el response del backend a un modelo amigable (igual que tenías)
   return (Array.isArray(raw) ? raw : []).map((p) => ({
     id: p.idProject,
     name: p.project,
@@ -218,4 +221,29 @@ export async function updateProject(projectId, payload) {
   }
 
   return resp.json().catch(() => ({}));
+}
+// GET /users/project/{projectId}
+export async function fetchUsersByProject(projectId, { signal } = {}) {
+  const API_BASE =
+    process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || "";
+  const withBase = (p) =>
+    `${API_BASE.replace(/\/$/, "")}${p.startsWith("/") ? p : `/${p}`}`;
+
+  const resp = await fetch(
+    withBase(`/users/project/${encodeURIComponent(projectId)}`),
+    {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal,
+      cache: "no-store",
+    }
+  );
+
+  if (!resp.ok) {
+    // Si tu back devuelve 404 cuando no hay usuarios, trata como []
+    if (resp.status === 404) return [];
+    const t = await resp.text().catch(() => "");
+    throw new Error(t || `HTTP ${resp.status}`);
+  }
+  return resp.json(); // [{idUser,userName,email,...}]
 }

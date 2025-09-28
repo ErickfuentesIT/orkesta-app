@@ -39,12 +39,13 @@ export default function DashboardPage() {
         <SideBar
           projects={projects}
           activeId={projects?.[0]?.id}
-          onSelect={(pid) => {
-            if (pid === "panel") router.push("/app/dashboard");
-            else router.push(`/app/projects/${pid}`);
-          }}
+          onSelect={(id) => router.push(`/app/projects/${id}`)}
           onLogout={handleLogout}
-          onToggleView={() => setIsProject((v) => !v)}
+          currentUser={{
+            name: "Olivia Rhye",
+            email: "olivia@untitledui.com",
+            status: "online",
+          }}
         />
 
         <div style={{ flex: 1, padding: 16 }}>
