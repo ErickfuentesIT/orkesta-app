@@ -1130,45 +1130,42 @@ input:focus {
 .sb2::-webkit-scrollbar-track {
   background: transparent;
 }
-.logoutIcon {
-  padding: 6px;
-  border-radius: 8px;
-  background: #f3f4f6; /* gris claro */
-  transition: all 0.2s ease-in-out;
-  cursor: pointer;
-}
-
-.logoutIcon:hover {
-  background: #ef4444; /* rojo suave */
-  transform: scale(1.1); /* efecto zoom */
-}
-
-.logoutIcon:active {
-  transform: scale(0.95);
-  background: #dc2626; /* rojo más fuerte */
-}
-
-.logoutBtn {
-  background: transparent;
+/* Botón de logout: estilo pill moderno */
+.sb2__logoutBtn {
+  background: white;
   border: none;
-  padding: 6px;
-  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--text);
+
   transition: background 0.2s ease, transform 0.15s ease;
 }
 
-.logoutBtn:hover {
-  background: rgba(239, 68, 68, 0.15); /* rojo claro translúcido */
-  transform: scale(1.1);
+/* Hover: círculo translúcido */
+.sb2__logoutBtn:hover {
+  background: red; /* rojo translúcido */
+  transform: scale(1.08);
 }
 
-.logoutBtn:active {
+/* Active: hundido */
+.sb2__logoutBtn:active {
+  background: red;
   transform: scale(0.95);
 }
 
-.logoutIcon {
-  filter: brightness(0) invert(1); /* blanco en dark mode */
+/* Icono logout */
+.sb2__logoutIcon {
+  width: 32px;
+  height: 32px;
+  display: block;
+  background-color: currentColor;
+  mask: url("/logout-svgrepo-com.svg") center / contain no-repeat;
+  -webkit-mask: url("/logout-svgrepo-com.svg") center / contain no-repeat;
 }

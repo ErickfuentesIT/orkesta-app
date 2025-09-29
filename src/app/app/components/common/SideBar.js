@@ -201,7 +201,7 @@ export default function Sidebar({
           </div>
 
           <button
-            className="logoutBtn"
+            className="sb2__logoutBtn"
             title="Cerrar sesión"
             onClick={onLogout}
           >
@@ -210,7 +210,7 @@ export default function Sidebar({
               alt="Logout"
               width={32}
               height={32}
-              className="logoutIcon"
+              className="sb2__logoutIcon"
             />
           </button>
         </div>
