@@ -45,7 +45,6 @@ export default function FirstForm({ title = "Form title", isLogin = true }) {
         return;
       }
       try {
-        // 1) Crear usuario
         await registerUser({
           userName: name?.trim() || email,
           email,
@@ -53,7 +52,6 @@ export default function FirstForm({ title = "Form title", isLogin = true }) {
           userStatus: 1,
         });
 
-        // 2) Auto-login y redirección
         const res = await login({ email, password, remember });
         router.replace(res.ok ? "/app/dashboard" : "/app/login");
         return;
@@ -149,7 +147,6 @@ export default function FirstForm({ title = "Form title", isLogin = true }) {
           </>
         )}
 
-        {/* En registro puedes ocultar "Recordarme" si prefieres */}
         <div
           className="grid-column-2"
           style={{ display: isLogin ? "block" : "none" }}

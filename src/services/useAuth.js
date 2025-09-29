@@ -18,14 +18,13 @@ function getStoredUser() {
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ||
-  process.env.NEXT_PUBLIC_API_URL || // ej: "http://localhost:8080"
+  process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:8080";
 
 const withBase = (p) =>
   `${API_BASE.replace(/\/$/, "")}${p.startsWith("/") ? p : `/${p}`}`;
-const LOGIN_EP = withBase("/users/login"); // ajusta si tu endpoint es otro
+const LOGIN_EP = withBase("/users/login");
 
-// 🔒 Whitelist de campos permitidos para guardar en storage
 function sanitizeUser(raw) {
   if (!raw || typeof raw !== "object") return null;
   return {
@@ -37,12 +36,10 @@ function sanitizeUser(raw) {
 }
 
 export function useAuth() {
-  // ⚠️ SSR-safe: no toques localStorage en el render inicial
-  const [user, setUser] = useState(getStoredUser); // ⬅️ importante
+  const [user, setUser] = useState(getStoredUser);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Hidrata usuario desde storage (local o session) en cliente
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -55,11 +52,9 @@ export function useAuth() {
     }
   }, []);
 
-  // Mantén storage sincronizado cuando cambia user
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (user) {
-      // marca el flag en ambos por simplicidad
       localStorage.setItem(LS_USER_KEY, JSON.stringify(user));
       localStorage.setItem(LS_LOGGED_KEY, "true");
       sessionStorage.setItem(LS_LOGGED_KEY, "true");
@@ -78,10 +73,9 @@ export function useAuth() {
       const resp = await fetch(LOGIN_EP, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: String(password) }), // se envía, pero NO se guarda
+        body: JSON.stringify({ email, password: String(password) }),
       });
 
-      // Manejo explícito por status
       if (!resp.ok) {
         const text = await resp.text().catch(() => "");
         let payload = null;
@@ -89,7 +83,6 @@ export function useAuth() {
           payload = JSON.parse(text);
         } catch {}
 
-        // 401 / 403 / 404 => credenciales inválidas
         if (resp.status === 401 || resp.status === 403 || resp.status === 404) {
           const msg = payload?.message || "Usuario o contraseña incorrectos";
           setUser(null);
@@ -97,14 +90,12 @@ export function useAuth() {
           return { ok: false, message: msg, status: resp.status };
         }
 
-        // Otros códigos: mensaje del backend o genérico
         const msg = payload?.message || `Error HTTP ${resp.status}`;
         setUser(null);
         setError(msg);
         return { ok: false, message: msg, status: resp.status };
       }
 
-      // intenta parsear, si no, fabrica payload mínimo
       let payload;
       try {
         payload = await resp.json();
@@ -112,11 +103,9 @@ export function useAuth() {
         payload = { user: { email } };
       }
 
-      // normalización del usuario y sanitización (NO guarda password ni extras)
       const raw = payload?.user ?? payload ?? { email };
       const normalized = sanitizeUser(raw);
 
-      // Recuerda en localStorage o sessionStorage
       if (typeof window !== "undefined") {
         const target = remember ? localStorage : sessionStorage;
         target.setItem(LS_USER_KEY, JSON.stringify(normalized));
@@ -150,24 +139,6 @@ export function useAuth() {
     (typeof window !== "undefined" &&
       (localStorage.getItem(LS_LOGGED_KEY) === "true" ||
         sessionStorage.getItem(LS_LOGGED_KEY) === "true"));
-
-  // (opcional) este efecto duplicaba el de arriba; lo puedes eliminar si quieres
-  // lo dejo comentado para no cambiar tu comportamiento actual
-  /*
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (user) {
-      localStorage.setItem(LS_USER_KEY, JSON.stringify(user));
-      localStorage.setItem(LS_LOGGED_KEY, "true");
-      sessionStorage.setItem(LS_LOGGED_KEY, "true");
-    } else {
-      localStorage.removeItem(LS_USER_KEY);
-      localStorage.removeItem(LS_LOGGED_KEY);
-      sessionStorage.removeItem(LS_USER_KEY);
-      sessionStorage.removeItem(LS_LOGGED_KEY);
-    }
-  }, [user]);
-  */
 
   return { user, loading, error, login, logout, isAuthenticated };
 }

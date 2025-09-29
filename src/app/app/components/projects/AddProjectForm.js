@@ -22,14 +22,6 @@ function getStoredUserId() {
   }
 }
 
-/**
- * Props:
- * - mode: 'create' | 'edit'
- * - initial: { idProject, project, description, createdDate, projectStatus }
- * - onCreated?: (created) => void
- * - onUpdated?: (updated) => void
- * - onCancel?: () => void
- */
 export default function AddProjectForm({
   mode = "create",
   initial,
@@ -46,19 +38,17 @@ export default function AddProjectForm({
     defaultValues: {
       project: "",
       description: "",
-      createdDate: new Date().toISOString().slice(0, 16), // yyyy-MM-ddTHH:mm
+      createdDate: new Date().toISOString().slice(0, 16),
       projectStatus: true,
     },
   });
 
   const [submitError, setSubmitError] = useState(null);
 
-  // --- NUEVO: usuarios y selección (solo en edición)
-  const [users, setUsers] = useState([]); // [{idUser,userName,email,...}]
+  const [users, setUsers] = useState([]);
   const [query, setQuery] = useState("");
-  const [selectedIds, setSelectedIds] = useState(new Set()); // ids de usuarios a asignar como miembros
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
-  // precarga valores del formulario al editar
   useEffect(() => {
     if (!initial) return;
     reset({
@@ -71,7 +61,6 @@ export default function AddProjectForm({
     });
   }, [initial, reset]);
 
-  // carga de usuarios (solo en modo edición)
   useEffect(() => {
     if (mode !== "edit") return;
     const ac = new AbortController();
@@ -81,7 +70,6 @@ export default function AddProjectForm({
     return () => ac.abort();
   }, [mode]);
 
-  // filtrar por userName o email
   const filteredUsers = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return users;
@@ -107,7 +95,6 @@ export default function AddProjectForm({
       ? new Date(values.createdDate).toISOString()
       : new Date().toISOString();
 
-    // ----- EDICIÓN -----
     if (mode === "edit") {
       if (!initial?.idProject) {
         setSubmitError("Falta idProject para editar.");
@@ -123,7 +110,6 @@ export default function AddProjectForm({
       try {
         const updated = await updateProject(initial.idProject, updatePayload);
 
-        // Asignar miembros seleccionados (rol 2)
         const assignPromises = Array.from(selectedIds).map((uid) =>
           assignUserToProject({
             userId: uid,
@@ -142,7 +128,6 @@ export default function AddProjectForm({
       return;
     }
 
-    // ----- CREACIÓN -----
     const ownerId = getStoredUserId();
     if (!ownerId) {
       setSubmitError("No se encontró el usuario en el almacenamiento.");
@@ -159,16 +144,14 @@ export default function AddProjectForm({
       const created = await createProject(createPayload);
       const projectId = created?.idProject;
 
-      // 🔑 ASIGNAR AL CREADOR COMO ADMIN (rol 1):
       if (projectId && ownerId) {
         await assignUserToProject({
           userId: ownerId,
           projectId,
-          roleId: 1, // admin
+          roleId: 1,
         });
       }
-      // Asignación del creador como admin ya la haces aparte si quieres,
-      // aquí solo avisamos que se creó
+
       onCreated?.(created);
       reset();
     } catch (e) {
@@ -229,7 +212,6 @@ export default function AddProjectForm({
         </label>
       </div>
 
-      {/* ------- NUEVO: Picker de miembros (solo en edición) ------- */}
       {mode === "edit" && (
         <div className="grid-column-2" style={{ marginTop: 12 }}>
           <h3 className="muted" style={{ marginBottom: 8 }}>

@@ -1,16 +1,5 @@
-// src/services/projects.js
-
-// Preferimos usar un proxy /api (rewrites o route handlers) para evitar CORS.
-// .env.local (recomendado):
-// NEXT_PUBLIC_API_BASE=/api
-//
-// Si no usas proxy y quieres llamar directo al backend desde el navegador:
-// NEXT_PUBLIC_API_URL=https://tu-backend.tu-dominio.com
-
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE || // ej: "/api"
-  process.env.NEXT_PUBLIC_API_URL || // ej: "https://backend.tu-dominio.com"
-  "";
+  process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || "";
 
 const withBase = (p) => {
   const base = API_BASE.replace(/\/$/, "");
@@ -18,17 +7,6 @@ const withBase = (p) => {
   return `${base}${path}`;
 };
 
-/**
- * GET /projects/all-user/{userId}
- * @param {string|number} userId
- * @param {{signal?: AbortSignal}} opts
- */
-/**
- * GET /projects/all-user/{userId}
- * - 200: array de proyectos
- * - 204/404: sin proyectos -> []
- * - otros errores: throw Error(message)
- */
 export async function fetchProjectsByUser(userId, { signal } = {}) {
   const url = withBase(`/projects/all-user/${encodeURIComponent(userId)}`);
 
@@ -39,22 +17,16 @@ export async function fetchProjectsByUser(userId, { signal } = {}) {
     cache: "no-store",
   });
 
-  // 204 No Content o 404 Not Found => sin proyectos
   if (resp.status === 204 || resp.status === 404) {
-    // (opcional) podrías loguear el mensaje del back
     try {
-      const j = await resp.json(); // { detalle: "No se encontraron..." }
+      const j = await resp.json();
       console.info("fetchProjectsByUser:", j?.detalle || "sin proyectos");
-    } catch {
-      /* body vacío o no-JSON */
-    }
+    } catch {}
     return [];
   }
 
   if (!resp.ok) {
-    // 500 antiguamente lo tratabas como []
     if (resp.status === 500) return [];
-    // otros: construimos un mensaje útil
     let msg = `Error HTTP ${resp.status}`;
     try {
       const j = await resp.json();
@@ -83,7 +55,6 @@ export async function fetchProjectsByUser(userId, { signal } = {}) {
   }));
 }
 
-// --- continúa en el mismo archivo donde tienes fetchProjectsByUser ---
 export async function createProject(payload) {
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || "";
@@ -93,7 +64,6 @@ export async function createProject(payload) {
   const resp = await fetch(withBase("/projects"), {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    // credentials: 'include', // <-- si tu backend usa cookies/JWT
     body: JSON.stringify(payload),
     cache: "no-store",
   });
@@ -114,7 +84,6 @@ export async function createProject(payload) {
   return resp.json().catch(() => ({}));
 }
 
-// src/services/projects.js
 export async function assignUserToProject({ userId, projectId, roleId = 1 }) {
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || "";
@@ -124,7 +93,7 @@ export async function assignUserToProject({ userId, projectId, roleId = 1 }) {
   const payload = {
     idUser: { idUser: Number(userId) },
     projects: { idProject: Number(projectId) },
-    idRole: { idRole: Number(roleId) }, // 1 admin, 2 miembro
+    idRole: { idRole: Number(roleId) },
   };
 
   const resp = await fetch(withBase("/users-projects"), {
@@ -139,9 +108,7 @@ export async function assignUserToProject({ userId, projectId, roleId = 1 }) {
     try {
       const j = await resp.json();
       msg = j?.message || j?.error || msg;
-    } catch {
-      /* ignore */
-    }
+    } catch {}
     throw new Error(msg);
   }
   return resp.json().catch(() => ({}));
@@ -177,18 +144,16 @@ export async function fetchProjectById(projectId, { signal } = {}) {
     throw new Error(msg);
   }
 
-  // Devuelve tal cual (tu back ya trae los campos del form)
   return resp.json();
 }
 
-// --- PUT /project/{id} --- (ajusta a tu EP si fuera /projects/{id})
+// --- PUT /project/{id} ---
 export async function updateProject(projectId, payload) {
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || "";
   const withBase = (p) =>
     `${API_BASE.replace(/\/$/, "")}${p.startsWith("/") ? p : `/${p}`}`;
 
-  // Obtener idUser desde localStorage/sessionStorage (igual que al crear)
   let userId = null;
   if (typeof window !== "undefined") {
     try {
@@ -200,19 +165,18 @@ export async function updateProject(projectId, payload) {
     } catch {}
   }
 
-  // Armar payload final para tu backend
   const body = {
-    idOwnerUser: { idUser: Number(userId) }, // 👈 obligatorio
+    idOwnerUser: { idUser: Number(userId) },
     project: payload.project,
     description: payload.description,
-    createdDate: payload.createdDate, // en ISO string
+    createdDate: payload.createdDate,
     projectStatus: Boolean(payload.projectStatus),
   };
 
   const resp = await fetch(
     withBase(`/projects/${encodeURIComponent(projectId)}`),
     {
-      method: "PATCH", // 👈 asegúrate que tu backend soporta PATCH; si no, usa PUT
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -255,10 +219,9 @@ export async function fetchUsersByProject(projectId, { signal } = {}) {
   );
 
   if (!resp.ok) {
-    // Si tu back devuelve 404 cuando no hay usuarios, trata como []
     if (resp.status === 404) return [];
     const t = await resp.text().catch(() => "");
     throw new Error(t || `HTTP ${resp.status}`);
   }
-  return resp.json(); // [{idUser,userName,email,...}]
+  return resp.json();
 }

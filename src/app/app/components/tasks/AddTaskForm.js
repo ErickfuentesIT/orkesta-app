@@ -24,7 +24,6 @@ function toDatetimeLocalInput(isoOrDate) {
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 }
 
-// Helper para extraer asignado con distintos shapes del backend
 function extractAssignee(initial) {
   if (!initial) return { id: null, name: null };
 
@@ -59,7 +58,7 @@ export default function AddTaskForm({
   onCreated,
   onUpdated,
   onCancel,
-  taskId: taskIdProp, // opcional
+  taskId: taskIdProp,
 }) {
   const {
     register,
@@ -79,7 +78,6 @@ export default function AddTaskForm({
     },
   });
 
-  // TaskId efectivo (de prop o de initial)
   const effectiveTaskId = useMemo(() => {
     return (
       taskIdProp ??
@@ -94,14 +92,12 @@ export default function AddTaskForm({
   const [users, setUsers] = useState([]);
   const inFlight = useRef(false);
 
-  // ProjectId efectivo
   const effectiveProjectId = useMemo(() => {
     const fromInitial =
       initial?.projectId ?? initial?._raw?.idProjects?.idProject ?? null;
     return Number(fromInitial ?? projectId ?? 0) || null;
   }, [initial, projectId]);
 
-  // Asignado actual (vía initial)
   const { id: preAssignedIdRaw, name: preAssignedName } = extractAssignee(
     initial || {}
   );
@@ -111,7 +107,6 @@ export default function AddTaskForm({
   const isEditAssigned = mode === "edit" && preAssignedIdStr !== "";
   const assignedUserId = watch("assignedUserId") ?? "";
 
-  // 1) Cargar usuarios (cuando NO hay asignado en edición, para listar opciones)
   useEffect(() => {
     if (!effectiveProjectId || isEditAssigned) return;
     const ac = new AbortController();
@@ -129,7 +124,6 @@ export default function AddTaskForm({
     return () => ac.abort();
   }, [effectiveProjectId, isEditAssigned]);
 
-  // 2) PRE-RELLENO AUTOMÁTICO EN MODO EDIT
   useEffect(() => {
     if (mode !== "edit") return;
 
@@ -137,7 +131,6 @@ export default function AddTaskForm({
 
     (async () => {
       try {
-        // Usamos initial si viene; si no, consultamos por id
         const t =
           initial ??
           (effectiveTaskId
@@ -182,7 +175,6 @@ export default function AddTaskForm({
     return () => ac.abort();
   }, [mode, effectiveTaskId, initial, reset, setValue]);
 
-  // 3) Si el valor sigue vacío cuando llegan datos, vuelve a fijarlo (solo edit)
   useEffect(() => {
     if (mode !== "edit") return;
     if (preAssignedIdStr && assignedUserId === "") {
@@ -220,10 +212,8 @@ export default function AddTaskForm({
           initial?.tasks;
         if (!taskId) throw new Error("Falta taskId para editar.");
 
-        // 1) Actualiza campos de la tarea
         const updated = await updateTask(taskId, payloadCommon);
 
-        // 2) Desasigna primero (ignora 404 si no había asignación)
         try {
           await unassignUserFromTask(taskId);
         } catch (e) {
@@ -232,7 +222,6 @@ export default function AddTaskForm({
           }
         }
 
-        // 3) Si hay usuario seleccionado, asigna
         if (nextAssignee) {
           await assignUserToTask({ taskId, userId: nextAssignee });
         }
@@ -241,7 +230,6 @@ export default function AddTaskForm({
         return;
       }
 
-      // CREAR
       if (!projectId) throw new Error("Falta projectId para crear la tarea.");
       const created = await createTask({
         idProjects: { idProject: Number(projectId) },

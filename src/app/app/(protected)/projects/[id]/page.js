@@ -8,7 +8,6 @@ import AddTaskForm from "@/app/app/components/tasks/AddTaskForm";
 import { useTasks } from "@/services/useTasks";
 import { fetchTaskById } from "@/services/tasks";
 
-// Normaliza una tarea que viene del back a tu modelo de front
 function mapTaskFromApi(t) {
   if (!t) return null;
   return {
@@ -24,37 +23,30 @@ function mapTaskFromApi(t) {
 }
 
 export default function ProjectTaskPage({ params }) {
-  // Next 15: params es una Promise — se “desenvuelve” con React.use()
   const { id } = React.use(params);
   const router = useRouter();
 
-  // Hook de tareas por proyecto
   const { tasks, loading, error, refetch, setTasks } = useTasks(id);
 
-  // overlays
   const [showCreate, setShowCreate] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
-  const [initialTask, setInitialTask] = React.useState(null); // tarea mapeada para edición
+  const [initialTask, setInitialTask] = React.useState(null);
 
-  // navegación sidebar
   const handleSelect = (pid) => router.push(`/app/projects/${pid}`);
   const handleLogout = () => router.replace("/app/login");
 
-  // abrir crear
   const openCreate = () => {
-    setInitialTask(null); // importante: limpio initial si venías de editar
+    setInitialTask(null);
     setShowCreate(true);
   };
 
-  // abrir editar (carga datos frescos del back)
   const openEdit = async (taskId) => {
     try {
       const fresh = await fetchTaskById(taskId);
-      setInitialTask(fresh); // AddTaskForm precargará con esto
+      setInitialTask(fresh);
       setShowEdit(true);
     } catch (e) {
       console.error("fetchTaskById error", e);
-      // aquí puedes disparar un toast si usas alguno
     }
   };
 
@@ -87,13 +79,7 @@ export default function ProjectTaskPage({ params }) {
             <div className="p-4 text-red-600">Error: {String(error)}</div>
           )}
 
-          {!loading && !error && (
-            <TaskBoard
-              tasks={tasks}
-              // Si tu TaskBoard también crea, puedes pasar onCreate={openCreate}
-              onEdit={openEdit}
-            />
-          )}
+          {!loading && !error && <TaskBoard tasks={tasks} onEdit={openEdit} />}
         </div>
       </div>
 
@@ -107,14 +93,13 @@ export default function ProjectTaskPage({ params }) {
               mode="create"
               initial={null}
               onCreated={(created) => {
-                // update optimista
                 const mapped = mapTaskFromApi(created);
                 setTasks?.((prev) => {
                   const next = Array.isArray(prev) ? [...prev] : [];
                   if (mapped) next.push(mapped);
                   return next;
                 });
-                refetch?.(); // revalida contra el back
+                refetch?.();
                 setShowCreate(false);
               }}
               onCancel={() => setShowCreate(false)}
@@ -137,7 +122,7 @@ export default function ProjectTaskPage({ params }) {
             <AddTaskForm
               projectId={id}
               mode="edit"
-              initial={initialTask} // 👈 viene de fetchTaskById
+              initial={initialTask}
               onUpdated={() => {
                 refetch?.();
                 setShowEdit(false);

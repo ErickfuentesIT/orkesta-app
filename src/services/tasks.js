@@ -1,7 +1,6 @@
-// src/services/tasks.js
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || "";
-const ASSIGNEE_FIELD = "assignedTo"; // ej: "assignedTo", "assignee", "responsable", "idUserAssigned"
+const ASSIGNEE_FIELD = "assignedTo";
 
 const withBase = (p) =>
   `${API_BASE.replace(/\/$/, "")}${p.startsWith("/") ? p : `/${p}`}`;
@@ -109,7 +108,6 @@ export async function fetchTaskById(taskId, { signal } = {}) {
 
   const t = await resp.json();
 
-  // 🔁 Mapeo a tu modelo “amigable” + guardamos _raw
   return {
     id: t?.tasks,
     projectId: t?.idProjects?.idProject ?? null,
@@ -119,7 +117,6 @@ export async function fetchTaskById(taskId, { signal } = {}) {
     statusText: t?.status?.status ?? null,
     startAt: t?.plannedStartDate ?? null,
     endAt: t?.plannedEndDate ?? null,
-    // datos de asignación (varias formas)
     assignedUserId:
       t?.assigment?.idUser?.idUser ??
       t?.assigment?.idUserId ??
@@ -139,8 +136,8 @@ export async function updateTask(taskId, payload) {
     `${API_BASE.replace(/\/$/, "")}${p.startsWith("/") ? p : `/${p}`}`;
 
   const {
-    projectId, // opcional si no viene en payload.idProjects
-    assignedUserId, // 👈 NUEVO: id del usuario asignado (number)
+    projectId,
+    assignedUserId,
     name,
     description,
     statusId,
@@ -159,14 +156,8 @@ export async function updateTask(taskId, payload) {
     plannedEndDate,
   };
 
-  // 👇 Añadimos el asignado SOLO si hay valor
   if (assignedUserId != null) {
-    // estructura por defecto:
     body[ASSIGNEE_FIELD] = { idUser: Number(assignedUserId) };
-
-    // Si tu backend espera otro nombre además, descomenta UNO y prueba:
-    // body.assignee = { idUser: Number(assignedUserId) };
-    // body.idUserAssigned = { idUser: Number(assignedUserId) };
   }
 
   const resp = await fetch(withBase(`/tasks/${encodeURIComponent(taskId)}`), {

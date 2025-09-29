@@ -25,11 +25,10 @@ export default function DashboardPage() {
   async function handleEdit(projectId) {
     try {
       const data = await fetchProjectById(projectId);
-      setEditData(data); // { idProject, project, description, createdDate, projectStatus, ... }
-      setShowForm(true); // abre overlay
+      setEditData(data);
+      setShowForm(true);
     } catch (e) {
       console.error("fetchProjectById error", e);
-      // opcional: muestra toast/alert
     }
   }
 
@@ -63,7 +62,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Overlay con el formulario */}
       {showForm && (
         <div
           className="overlay"

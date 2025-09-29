@@ -1,12 +1,10 @@
-// src/services/usersTasks.js
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || "";
 const withBase = (p) =>
   `${API_BASE.replace(/\/$/, "")}${p.startsWith("/") ? p : `/${p}`}`;
 
 export async function assignUserToTask({ userId, taskId }) {
-  // 👇 Guardas duras
-  if (!userId || !taskId) return {}; // NO-OP
+  if (!userId || !taskId) return {};
 
   const payload = {
     idUser: { idUser: Number(userId) },
@@ -35,8 +33,7 @@ export async function assignUserToTask({ userId, taskId }) {
 }
 
 export async function unassignUserFromTask(taskId) {
-  // 👇 Guardas duras
-  if (!taskId) return {}; // NO-OP
+  if (!taskId) return {};
 
   const resp = await fetch(
     withBase(`/users-tasks/${encodeURIComponent(taskId)}`),
@@ -47,7 +44,6 @@ export async function unassignUserFromTask(taskId) {
     }
   );
 
-  // tolera 204/404 como “ya estaba desasignado”
   if (!resp.ok && resp.status !== 204 && resp.status !== 404) {
     let msg = `HTTP ${resp.status}`;
     try {

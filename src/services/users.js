@@ -18,13 +18,11 @@ export async function registerUser({
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    // Si usas cookies/JWT en el backend, agrega:
-    // credentials: 'include',
+
     body: JSON.stringify({ userName, email, password, userStatus }),
   });
 
   if (!resp.ok) {
-    // intenta extraer mensaje del backend
     let msg = `Error HTTP ${resp.status}`;
     try {
       const j = await resp.json();
@@ -38,16 +36,13 @@ export async function registerUser({
     throw new Error(msg);
   }
 
-  // devuelve el usuario creado (ajusta si tu API devuelve otra forma)
   try {
     return await resp.json();
   } catch {
-    // por si el backend no devuelve JSON
     return true;
   }
 }
 
-/** GET /users/all */
 export async function fetchAllUsers({ signal } = {}) {
   const resp = await fetch(withBase("/users/all"), {
     method: "GET",
@@ -60,10 +55,8 @@ export async function fetchAllUsers({ signal } = {}) {
     try {
       const j = await resp.json();
       msg = j?.message || msg;
-    } catch {
-      /* ignore */
-    }
+    } catch {}
     throw new Error(msg);
   }
-  return resp.json(); // [{idUser,userName,email,...}, ...]
+  return resp.json();
 }

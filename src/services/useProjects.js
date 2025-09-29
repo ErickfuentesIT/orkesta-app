@@ -1,5 +1,4 @@
 "use client";
-// src/services/useProjects.js (o src/hooks/useProjects.js)
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { fetchProjectsByUser } from "@/services/projects";
 import { useAuth } from "@/services/useAuth";
@@ -28,7 +27,6 @@ export function useProjects() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // ---- NUEVO: función reutilizable para cargar
   const run = useCallback(
     async (signal) => {
       if (userId == null) return;
@@ -57,8 +55,7 @@ export function useProjects() {
     return () => ac.abort();
   }, [run]);
 
-  // ---- NUEVO: refetch público
   const refetch = useCallback(() => run(undefined), [run]);
 
-  return { projects, loading, error, userId, refetch, setProjects }; // setProjects opcional para updates optimistas
+  return { projects, loading, error, userId, refetch, setProjects };
 }

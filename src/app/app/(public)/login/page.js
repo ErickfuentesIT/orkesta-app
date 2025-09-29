@@ -7,7 +7,6 @@ export default function LoginPage() {
       <div className="wrapper">
         <aside className="left">
           <section>
-            {/* el logo ahora está en /public */}
             <Image
               src="/logo_orkesta.png"
               width="700"
@@ -19,7 +18,6 @@ export default function LoginPage() {
 
         <main className="right">
           <div className="login-wrap">
-            {/* <- className, no class */}
             <FirstForm title="Iniciar Sesión" isLogin={true} />
           </div>
         </main>

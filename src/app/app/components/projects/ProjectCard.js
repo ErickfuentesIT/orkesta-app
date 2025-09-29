@@ -3,7 +3,6 @@ export default function ProjectCard({ project, onEdit }) {
 
   return (
     <section className="card" style={{ position: "relative" }}>
-      {/* Botón 3 puntos (esquina superior derecha) */}
       <button
         aria-label="Editar proyecto"
         onClick={(e) => {

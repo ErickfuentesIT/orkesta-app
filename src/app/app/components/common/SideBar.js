@@ -1,4 +1,3 @@
-// src/app/app/components/common/Sidebar.jsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -6,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-/** Íconos (SVG inline, livianos) */
 const Icon = {
   home: (
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
@@ -66,7 +64,7 @@ function parseStoredUser() {
       userName: parsed?.userName ?? null,
       email: parsed?.email ?? null,
       avatarUrl: parsed?.avatarUrl ?? null,
-      userStatus: parsed?.userStatus ?? null, // boolean
+      userStatus: parsed?.userStatus ?? null,
     };
   } catch {
     return null;
@@ -87,13 +85,12 @@ export default function Sidebar({
   activeId = null,
   onSelect = () => {},
   onLogout = () => {},
-  user, // opcional: { name, userName, email, avatarUrl, status: 'online'|'away' }
+  user,
 }) {
   const router = useRouter();
   const [openProj, setOpenProj] = useState(true);
   const [q, setQ] = useState("");
 
-  // user desde localStorage (cliente)
   const [storedUser, setStoredUser] = useState(null);
   useEffect(() => {
     setStoredUser(parseStoredUser());
@@ -105,7 +102,6 @@ export default function Sidebar({
     return projects.filter((p) => (p.name || "").toLowerCase().includes(s));
   }, [projects, q]);
 
-  // datos mostrados (prioriza props.user; storage como respaldo)
   const displayName = useMemo(() => {
     return user?.name || user?.userName || storedUser?.userName || "Invitado";
   }, [user, storedUser]);
@@ -122,13 +118,13 @@ export default function Sidebar({
 
   return (
     <aside className="sb2">
-      {/* Brand */}
+      {/* Marca */}
       <div className="sb2__brand">
         <div className="sb2__logo" aria-hidden />
         <div className="sb2__title">Orkesta</div>
       </div>
 
-      {/* Search */}
+      {/* Buscar */}
       <div className="sb2__search">
         <span className="sb2__searchIcon">{Icon.search}</span>
         <input
@@ -145,7 +141,7 @@ export default function Sidebar({
           <span className="sb2__label">Home</span>
         </Link>
 
-        {/* Projects (collapsible) */}
+        {/* Projectos */}
         <div className="sb2__section">
           <button className="sb2__item" onClick={() => setOpenProj((v) => !v)}>
             <span className="sb2__icon">{Icon.projects}</span>
@@ -179,12 +175,11 @@ export default function Sidebar({
         <hr className="sb2__divider" />
       </nav>
 
-      {/* Footer user card */}
+      {/* Footer Usuario */}
       <div className="sb2__footer">
         <div className="sb2__user">
           <div className="sb2__avatar" aria-label={`Usuario ${displayName}`}>
             {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt={`Avatar de ${displayName}`} />
             ) : (
               <span className="sb2__avatarFallback" aria-hidden="true">

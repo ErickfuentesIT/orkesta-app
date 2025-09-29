@@ -44,7 +44,7 @@ export default function TaskBoard({ tasks = [], onEdit }) {
               className="task-card"
               style={{ position: "relative" }}
             >
-              {/* 3 puntos (abre edición) */}
+              {/* 3 puntos de edición */}
               <button
                 aria-label="Editar tarea"
                 onClick={(e) => {

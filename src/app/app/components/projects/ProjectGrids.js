@@ -54,7 +54,6 @@ export default function ProjectsGrid({
                 className="card-link"
                 key={p.id}
               >
-                {/* Si ProjectCard necesita click propio para editar, pásale onEdit */}
                 <ProjectCard project={p} onEdit={onEdit} />
               </Link>
             ))}
