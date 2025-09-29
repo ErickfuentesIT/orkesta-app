@@ -1,7 +1,8 @@
 // src/app/app/components/common/Sidebar.jsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -55,22 +56,69 @@ const Icon = {
   dot: <span className="sb-dot" aria-hidden />,
 };
 
+function parseStoredUser() {
+  try {
+    const raw = localStorage.getItem("simpleAuth.user");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return {
+      idUser: parsed?.idUser ?? parsed?.id ?? null,
+      userName: parsed?.userName ?? null,
+      email: parsed?.email ?? null,
+      avatarUrl: parsed?.avatarUrl ?? null,
+      userStatus: parsed?.userStatus ?? null, // boolean
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getInitials(name) {
+  if (!name) return "U";
+  const parts = String(name).trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? "" : "";
+  const letters = first + last || first || "U";
+  return letters.toUpperCase();
+}
+
 export default function Sidebar({
   projects = [],
   activeId = null,
   onSelect = () => {},
   onLogout = () => {},
-  user, // opcional: { name, email, avatarUrl, status: 'online'|'away' }
+  user, // opcional: { name, userName, email, avatarUrl, status: 'online'|'away' }
 }) {
   const router = useRouter();
   const [openProj, setOpenProj] = useState(true);
   const [q, setQ] = useState("");
+
+  // user desde localStorage (cliente)
+  const [storedUser, setStoredUser] = useState(null);
+  useEffect(() => {
+    setStoredUser(parseStoredUser());
+  }, []);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return projects;
     return projects.filter((p) => (p.name || "").toLowerCase().includes(s));
   }, [projects, q]);
+
+  // datos mostrados (prioriza props.user; storage como respaldo)
+  const displayName = useMemo(() => {
+    return user?.name || user?.userName || storedUser?.userName || "Invitado";
+  }, [user, storedUser]);
+
+  const avatarUrl = useMemo(() => {
+    return user?.avatarUrl ?? storedUser?.avatarUrl ?? null;
+  }, [user, storedUser]);
+
+  const isOnline = useMemo(() => {
+    return user?.status === "online" || storedUser?.userStatus === true;
+  }, [user, storedUser]);
+
+  const initials = getInitials(displayName);
 
   return (
     <aside className="sb2">
@@ -89,7 +137,6 @@ export default function Sidebar({
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <kbd className="sb2__kbd">⌘K</kbd>
       </div>
 
       <nav className="sb2__nav">
@@ -130,50 +177,41 @@ export default function Sidebar({
         </div>
 
         <hr className="sb2__divider" />
-
-        <button
-          className="sb2__item"
-          onClick={() => router.push("/app/settings")}
-        >
-          <span className="sb2__icon">{Icon.settings}</span>
-          <span className="sb2__label">Settings</span>
-        </button>
-
-        <a
-          className="sb2__item"
-          href="https://example.com"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <span className="sb2__icon">{Icon.external}</span>
-          <span className="sb2__label">Open in browser</span>
-        </a>
       </nav>
 
       {/* Footer user card */}
       <div className="sb2__footer">
         <div className="sb2__user">
-          <div className="sb2__avatar">
-            {user?.avatarUrl ? (
+          <div className="sb2__avatar" aria-label={`Usuario ${displayName}`}>
+            {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={user.avatarUrl} alt="" />
+              <img src={avatarUrl} alt={`Avatar de ${displayName}`} />
             ) : (
-              <span className="sb2__avatarFallback">
-                {user?.name?.[0]?.toUpperCase() || "U"}
+              <span className="sb2__avatarFallback" aria-hidden="true">
+                {initials}
               </span>
             )}
-            {user?.status === "online" && <span className="sb2__online" />}
+            {isOnline && <span className="sb2__online" title="En línea" />}
           </div>
+
           <div className="sb2__userInfo">
-            <div className="sb2__userName">{user?.name || "Invitado"}</div>
-            <div className="sb2__userEmail">{user?.email || "—"}</div>
+            <div className="sb2__userName" title={displayName}>
+              {displayName}
+            </div>
           </div>
+
           <button
-            className="sb2__logoutBtn"
+            className="logoutBtn"
             title="Cerrar sesión"
             onClick={onLogout}
           >
-            ⎋
+            <Image
+              src="/logout-svgrepo-com.svg"
+              alt="Logout"
+              width={32}
+              height={32}
+              className="logoutIcon"
+            />
           </button>
         </div>
       </div>

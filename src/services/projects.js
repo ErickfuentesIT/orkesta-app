@@ -23,6 +23,12 @@ const withBase = (p) => {
  * @param {string|number} userId
  * @param {{signal?: AbortSignal}} opts
  */
+/**
+ * GET /projects/all-user/{userId}
+ * - 200: array de proyectos
+ * - 204/404: sin proyectos -> []
+ * - otros errores: throw Error(message)
+ */
 export async function fetchProjectsByUser(userId, { signal } = {}) {
   const url = withBase(`/projects/all-user/${encodeURIComponent(userId)}`);
 
@@ -33,17 +39,26 @@ export async function fetchProjectsByUser(userId, { signal } = {}) {
     cache: "no-store",
   });
 
-  if (!resp.ok) {
-    // 👇 si el back usa 500 para "sin proyectos", devuélvelo como []
-    if (resp.status === 500) {
-      // opcional: podrías leer el body por logging
-      // const txt = await resp.text().catch(()=> "");
-      return [];
+  // 204 No Content o 404 Not Found => sin proyectos
+  if (resp.status === 204 || resp.status === 404) {
+    // (opcional) podrías loguear el mensaje del back
+    try {
+      const j = await resp.json(); // { detalle: "No se encontraron..." }
+      console.info("fetchProjectsByUser:", j?.detalle || "sin proyectos");
+    } catch {
+      /* body vacío o no-JSON */
     }
+    return [];
+  }
+
+  if (!resp.ok) {
+    // 500 antiguamente lo tratabas como []
+    if (resp.status === 500) return [];
+    // otros: construimos un mensaje útil
     let msg = `Error HTTP ${resp.status}`;
     try {
       const j = await resp.json();
-      msg = j?.message || msg;
+      msg = j?.message || j?.detalle || msg;
     } catch {
       try {
         const t = await resp.text();

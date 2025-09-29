@@ -96,7 +96,15 @@ export default function TaskBoard({ tasks = [], onEdit }) {
                 {" → "}
                 {end ? new Date(end).toLocaleDateString() : "Sin fin"}
               </small>
-              {t.isAssigned && <small className="muted">Asignada</small>}
+              {t._raw?.assigment ? (
+                <small className="muted">
+                  Asignada a{" "}
+                  {t._raw.assigment.userName ??
+                    `Usuario #${t._raw.assigment.idUser}`}
+                </small>
+              ) : (
+                <small className="muted">Sin asignar</small>
+              )}
             </div>
           );
         })

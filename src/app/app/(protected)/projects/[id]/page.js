@@ -8,31 +8,53 @@ import AddTaskForm from "@/app/app/components/tasks/AddTaskForm";
 import { useTasks } from "@/services/useTasks";
 import { fetchTaskById } from "@/services/tasks";
 
+// Normaliza una tarea que viene del back a tu modelo de front
+function mapTaskFromApi(t) {
+  if (!t) return null;
+  return {
+    id: t.tasks ?? t.id ?? t._raw?.tasks ?? Date.now(),
+    title: t.name ?? t.title ?? "",
+    description: t.description ?? "",
+    statusId: (t.status?.idStatus ?? Number(t.statusId ?? 1)) || 1,
+    statusText: t.status?.status ?? String(t.statusId ?? "1"),
+    startAt: t.plannedStartDate ?? t.startAt ?? null,
+    endAt: t.plannedEndDate ?? t.endAt ?? null,
+    _raw: t,
+  };
+}
+
 export default function ProjectTaskPage({ params }) {
+  // Next 15: params es una Promise — se “desenvuelve” con React.use()
   const { id } = React.use(params);
   const router = useRouter();
 
+  // Hook de tareas por proyecto
   const { tasks, loading, error, refetch, setTasks } = useTasks(id);
 
   // overlays
   const [showCreate, setShowCreate] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
-  const [initialTask, setInitialTask] = React.useState(null);
+  const [initialTask, setInitialTask] = React.useState(null); // tarea mapeada para edición
 
+  // navegación sidebar
   const handleSelect = (pid) => router.push(`/app/projects/${pid}`);
   const handleLogout = () => router.replace("/app/login");
 
   // abrir crear
-  const openCreate = () => setShowCreate(true);
+  const openCreate = () => {
+    setInitialTask(null); // importante: limpio initial si venías de editar
+    setShowCreate(true);
+  };
 
-  // abrir editar (carga datos)
+  // abrir editar (carga datos frescos del back)
   const openEdit = async (taskId) => {
     try {
-      const data = await fetchTaskById(taskId);
-      setInitialTask(data);
+      const fresh = await fetchTaskById(taskId);
+      setInitialTask(fresh); // AddTaskForm precargará con esto
       setShowEdit(true);
     } catch (e) {
       console.error("fetchTaskById error", e);
+      // aquí puedes disparar un toast si usas alguno
     }
   };
 
@@ -64,7 +86,14 @@ export default function ProjectTaskPage({ params }) {
           {error && (
             <div className="p-4 text-red-600">Error: {String(error)}</div>
           )}
-          {!loading && !error && <TaskBoard tasks={tasks} onEdit={openEdit} />}
+
+          {!loading && !error && (
+            <TaskBoard
+              tasks={tasks}
+              // Si tu TaskBoard también crea, puedes pasar onCreate={openCreate}
+              onEdit={openEdit}
+            />
+          )}
         </div>
       </div>
 
@@ -76,23 +105,16 @@ export default function ProjectTaskPage({ params }) {
             <AddTaskForm
               projectId={id}
               mode="create"
-              onCreated={(t) => {
+              initial={null}
+              onCreated={(created) => {
                 // update optimista
+                const mapped = mapTaskFromApi(created);
                 setTasks?.((prev) => {
                   const next = Array.isArray(prev) ? [...prev] : [];
-                  next.push({
-                    id: t?.tasks ?? t?.id ?? Date.now(),
-                    title: t?.name,
-                    description: t?.description ?? "",
-                    statusId: t?.status?.idStatus ?? 1,
-                    statusText: t?.status?.status ?? "1",
-                    startAt: t?.plannedStartDate ?? null,
-                    endAt: t?.plannedEndDate ?? null,
-                    _raw: t,
-                  });
+                  if (mapped) next.push(mapped);
                   return next;
                 });
-                refetch();
+                refetch?.(); // revalida contra el back
                 setShowCreate(false);
               }}
               onCancel={() => setShowCreate(false)}
@@ -115,9 +137,9 @@ export default function ProjectTaskPage({ params }) {
             <AddTaskForm
               projectId={id}
               mode="edit"
-              initial={initialTask}
+              initial={initialTask} // 👈 viene de fetchTaskById
               onUpdated={() => {
-                refetch();
+                refetch?.();
                 setShowEdit(false);
                 setInitialTask(null);
               }}

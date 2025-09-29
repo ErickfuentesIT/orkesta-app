@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { createTask, updateTask } from "@/services/tasks";
+import { createTask, updateTask, fetchTaskById } from "@/services/tasks";
 import { fetchUsersByProject } from "@/services/projects";
 import { assignUserToTask, unassignUserFromTask } from "@/services/usersTasks";
 
@@ -11,6 +11,47 @@ const STATUS_OPTIONS = [
   { id: 3, label: "Terminado" },
 ];
 
+function toDatetimeLocalInput(isoOrDate) {
+  if (!isoOrDate) return "";
+  const d = typeof isoOrDate === "string" ? new Date(isoOrDate) : isoOrDate;
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mi = pad(d.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
+// Helper para extraer asignado con distintos shapes del backend
+function extractAssignee(initial) {
+  if (!initial) return { id: null, name: null };
+
+  if (initial.assignedUserId) {
+    return {
+      id: Number(initial.assignedUserId),
+      name: initial.assignedUserName ?? null,
+    };
+  }
+
+  const a = initial._raw?.assigment ?? null;
+  if (!a) return { id: null, name: null };
+
+  if (a.idUser && typeof a.idUser === "object") {
+    return {
+      id: a.idUser.idUser ?? null,
+      name: a.idUser.userName ?? a.idUser.email ?? null,
+    };
+  }
+  if (typeof a.idUser === "number") return { id: a.idUser, name: null };
+  if (typeof a.idUserId === "number") return { id: a.idUserId, name: null };
+  if (a.user && typeof a.user === "object") {
+    return { id: a.user.idUser ?? null, name: a.user.userName ?? null };
+  }
+  return { id: null, name: null };
+}
+
 export default function AddTaskForm({
   projectId,
   mode = "create",
@@ -18,11 +59,14 @@ export default function AddTaskForm({
   onCreated,
   onUpdated,
   onCancel,
+  taskId: taskIdProp, // opcional
 }) {
   const {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     defaultValues: {
@@ -31,22 +75,45 @@ export default function AddTaskForm({
       plannedStartDate: "",
       plannedEndDate: "",
       statusId: 1,
-      assignedUserId: "", // vacío = sin asignar
+      assignedUserId: "",
     },
   });
+
+  // TaskId efectivo (de prop o de initial)
+  const effectiveTaskId = useMemo(() => {
+    return (
+      taskIdProp ??
+      initial?.id ??
+      initial?._raw?.tasks ??
+      initial?.tasks ??
+      null
+    );
+  }, [taskIdProp, initial]);
 
   const [submitError, setSubmitError] = useState(null);
   const [users, setUsers] = useState([]);
   const inFlight = useRef(false);
 
+  // ProjectId efectivo
   const effectiveProjectId = useMemo(() => {
     const fromInitial =
       initial?.projectId ?? initial?._raw?.idProjects?.idProject ?? null;
     return Number(fromInitial ?? projectId ?? 0) || null;
   }, [initial, projectId]);
 
+  // Asignado actual (vía initial)
+  const { id: preAssignedIdRaw, name: preAssignedName } = extractAssignee(
+    initial || {}
+  );
+  const preAssignedIdStr =
+    preAssignedIdRaw != null ? String(preAssignedIdRaw) : "";
+
+  const isEditAssigned = mode === "edit" && preAssignedIdStr !== "";
+  const assignedUserId = watch("assignedUserId") ?? "";
+
+  // 1) Cargar usuarios (cuando NO hay asignado en edición, para listar opciones)
   useEffect(() => {
-    if (!effectiveProjectId) return;
+    if (!effectiveProjectId || isEditAssigned) return;
     const ac = new AbortController();
     (async () => {
       try {
@@ -56,29 +123,72 @@ export default function AddTaskForm({
         setUsers(Array.isArray(list) ? list : []);
       } catch (e) {
         if (e?.name === "AbortError") return;
+        console.warn("fetchUsersByProject error:", e);
       }
     })();
     return () => ac.abort();
-  }, [effectiveProjectId]);
+  }, [effectiveProjectId, isEditAssigned]);
 
+  // 2) PRE-RELLENO AUTOMÁTICO EN MODO EDIT
   useEffect(() => {
-    if (mode !== "edit" || !initial) return;
-    const preAssigned =
-      initial?.assignedUserId ?? initial?._raw?.assigment?.idUser?.idUser ?? "";
+    if (mode !== "edit") return;
 
-    reset({
-      name: initial.title ?? initial.name ?? "",
-      description: initial.description ?? "",
-      plannedStartDate: initial.startAt
-        ? new Date(initial.startAt).toISOString().slice(0, 16)
-        : "",
-      plannedEndDate: initial.endAt
-        ? new Date(initial.endAt).toISOString().slice(0, 16)
-        : "",
-      statusId: Number(initial.statusId ?? initial?.status?.idStatus ?? 1) || 1,
-      assignedUserId: preAssigned || "",
-    });
-  }, [mode, initial, reset]);
+    const ac = new AbortController();
+
+    (async () => {
+      try {
+        // Usamos initial si viene; si no, consultamos por id
+        const t =
+          initial ??
+          (effectiveTaskId
+            ? await fetchTaskById(effectiveTaskId, { signal: ac.signal })
+            : null);
+        if (!t) return;
+
+        const name = t?.name ?? t?._raw?.name ?? t?.taskName ?? "";
+        const description = t?.description ?? t?._raw?.description ?? "";
+        const statusId =
+          t?.status?.idStatus ?? t?.statusId ?? t?._raw?.status?.idStatus ?? 1;
+
+        const plannedStartDate = toDatetimeLocalInput(
+          t?.plannedStartDate ?? t?._raw?.plannedStartDate ?? null
+        );
+        const plannedEndDate = toDatetimeLocalInput(
+          t?.plannedEndDate ?? t?._raw?.plannedEndDate ?? null
+        );
+
+        const { id: assigneeId } = extractAssignee({ _raw: t, ...t });
+
+        reset({
+          name,
+          description,
+          statusId,
+          plannedStartDate,
+          plannedEndDate,
+          assignedUserId: assigneeId != null ? String(assigneeId) : "",
+        });
+
+        if (assigneeId != null) {
+          setValue("assignedUserId", String(assigneeId), {
+            shouldDirty: false,
+          });
+        }
+      } catch (e) {
+        if (e?.name === "AbortError") return;
+        console.warn("No se pudo cargar la tarea:", e);
+      }
+    })();
+
+    return () => ac.abort();
+  }, [mode, effectiveTaskId, initial, reset, setValue]);
+
+  // 3) Si el valor sigue vacío cuando llegan datos, vuelve a fijarlo (solo edit)
+  useEffect(() => {
+    if (mode !== "edit") return;
+    if (preAssignedIdStr && assignedUserId === "") {
+      setValue("assignedUserId", preAssignedIdStr, { shouldDirty: false });
+    }
+  }, [mode, preAssignedIdStr, assignedUserId, setValue]);
 
   const onSubmit = async (values) => {
     if (inFlight.current) return;
@@ -103,28 +213,27 @@ export default function AddTaskForm({
 
     try {
       if (mode === "edit") {
-        const taskId = initial?.id ?? initial?._raw?.tasks ?? initial?.tasks;
+        const taskId =
+          effectiveTaskId ??
+          initial?.id ??
+          initial?._raw?.tasks ??
+          initial?.tasks;
         if (!taskId) throw new Error("Falta taskId para editar.");
 
+        // 1) Actualiza campos de la tarea
         const updated = await updateTask(taskId, payloadCommon);
 
-        const prevAssignee =
-          initial?.assignedUserId ??
-          initial?._raw?.assigment?.idUser?.idUser ??
-          null;
+        // 2) Desasigna primero (ignora 404 si no había asignación)
+        try {
+          await unassignUserFromTask(taskId);
+        } catch (e) {
+          if (!String(e?.message || "").includes("404")) {
+            console.warn("unassignUserFromTask warning:", e);
+          }
+        }
 
-        if (prevAssignee === nextAssignee) {
-          // no-ops
-        } else if (prevAssignee && !nextAssignee) {
-          await unassignUserFromTask(taskId);
-        } else if (!prevAssignee && nextAssignee) {
-          await assignUserToTask({ taskId, userId: nextAssignee });
-        } else if (
-          prevAssignee &&
-          nextAssignee &&
-          prevAssignee !== nextAssignee
-        ) {
-          await unassignUserFromTask(taskId);
+        // 3) Si hay usuario seleccionado, asigna
+        if (nextAssignee) {
           await assignUserToTask({ taskId, userId: nextAssignee });
         }
 
@@ -157,11 +266,12 @@ export default function AddTaskForm({
     }
   };
 
+  const currentAssigneeValue =
+    (assignedUserId ?? "") !== "" ? assignedUserId : preAssignedIdStr;
+  const lockOnAssigned = Boolean(preAssignedIdStr);
+
   return (
     <form className="form-grid" onSubmit={handleSubmit(onSubmit)}>
-      {/* Título opcional si lo pones dentro del modal */}
-      {/* <h3 className="grid-column-2">Nueva tarea</h3> */}
-
       <label className="muted" htmlFor="name">
         Nombre
       </label>
@@ -220,14 +330,36 @@ export default function AddTaskForm({
       <label className="muted" htmlFor="assignedUserId">
         Asignar a
       </label>
-      <select id="assignedUserId" {...register("assignedUserId")}>
-        <option value="">— Sin asignar —</option>
-        {users.map((u) => (
-          <option key={u.idUser} value={u.idUser}>
-            {u.userName} — {u.email}
+
+      <select
+        id="assignedUserId"
+        value={currentAssigneeValue}
+        onChange={(e) => setValue("assignedUserId", e.target.value)}
+        disabled={lockOnAssigned}
+        {...register("assignedUserId")}
+      >
+        {!preAssignedIdStr && <option value="">— Sin asignar —</option>}
+
+        {preAssignedIdStr && (
+          <option value={preAssignedIdStr}>
+            {preAssignedName ? preAssignedName : `Usuario #${preAssignedIdStr}`}
           </option>
-        ))}
+        )}
+
+        {users
+          .filter((u) => String(u.idUser) !== preAssignedIdStr)
+          .map((u) => (
+            <option key={u.idUser} value={String(u.idUser)}>
+              {u.userName} — {u.email}
+            </option>
+          ))}
       </select>
+
+      {preAssignedIdStr && (
+        <small className="muted" style={{ marginTop: 6 }}>
+          Asignada a {preAssignedName ?? `Usuario #${preAssignedIdStr}`}
+        </small>
+      )}
 
       <div
         className="grid-column-2"

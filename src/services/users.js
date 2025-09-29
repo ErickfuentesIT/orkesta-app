@@ -1,9 +1,3 @@
-// src/services/users.js
-
-// Usa proxy /api (rewrites) o una URL pública
-// En .env.local puedes definir:
-// NEXT_PUBLIC_API_BASE=/api          (recomendado con rewrites a Spring)
-// o NEXT_PUBLIC_API_URL=http://localhost:8080
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || "";
 

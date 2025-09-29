@@ -38,23 +38,24 @@ export async function fetchTasksByProject(projectId, { signal } = {}) {
   const raw = await resp.json();
 
   return (Array.isArray(raw) ? raw : []).map((t) => {
-    const statusId = t?.status?.idStatus ?? null;
-    // Si viene objeto de asignación, intenta extraer idUser
     const assignedUserId =
-      t?.assigment?.idUser?.idUser ??
-      t?.assigment?.idUserId ?? // por si el back trae otra forma
-      null;
+      t?.assigment?.idUser?.idUser ?? t?.assigment?.idUserId ?? null;
+
+    const assignedUserName =
+      t?.assigment?.idUser?.userName ?? t?.assigment?.userName ?? null;
+
     return {
       id: t.tasks,
       projectId: t?.idProjects?.idProject ?? null,
       title: t?.name ?? `Tarea #${t.tasks}`,
       description: t?.description ?? "",
-      statusId,
+      statusId: t?.status?.idStatus ?? null,
       statusText: t?.status?.status ?? null,
       startAt: t?.plannedStartDate ?? null,
       endAt: t?.plannedEndDate ?? null,
-      assignedUserId, // 👈 NUEVO
-      isAssigned: Boolean(t?.assigment), // null -> false, objeto -> true
+      assignedUserId, // 👈 id del asignado (o null)
+      assignedUserName, // 👈 nombre del asignado (o null)
+      isAssigned: Boolean(t?.assigment), // true si hay objeto
       _raw: t,
     };
   });
@@ -84,13 +85,8 @@ export async function createTask(payload) {
   return resp.json().catch(() => ({}));
 }
 
-// GET /tasks/{taskId}
+/** GET /tasks/{taskId} */
 export async function fetchTaskById(taskId, { signal } = {}) {
-  const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || "";
-  const withBase = (p) =>
-    `${API_BASE.replace(/\/$/, "")}${p.startsWith("/") ? p : `/${p}`}`;
-
   const resp = await fetch(withBase(`/tasks/${encodeURIComponent(taskId)}`), {
     method: "GET",
     headers: { Accept: "application/json" },
@@ -99,10 +95,40 @@ export async function fetchTaskById(taskId, { signal } = {}) {
   });
 
   if (!resp.ok) {
-    const t = await resp.text().catch(() => "");
-    throw new Error(t || `HTTP ${resp.status}`);
+    let msg = `HTTP ${resp.status}`;
+    try {
+      const j = await resp.json();
+      msg = j?.message || j?.error || msg;
+    } catch {
+      try {
+        msg = (await resp.text()) || msg;
+      } catch {}
+    }
+    throw new Error(msg);
   }
-  return resp.json(); // te llega en crudo (name, status.idStatus, plannedStartDate, etc)
+
+  const t = await resp.json();
+
+  // 🔁 Mapeo a tu modelo “amigable” + guardamos _raw
+  return {
+    id: t?.tasks,
+    projectId: t?.idProjects?.idProject ?? null,
+    title: t?.name ?? "",
+    description: t?.description ?? "",
+    statusId: t?.status?.idStatus ?? null,
+    statusText: t?.status?.status ?? null,
+    startAt: t?.plannedStartDate ?? null,
+    endAt: t?.plannedEndDate ?? null,
+    // datos de asignación (varias formas)
+    assignedUserId:
+      t?.assigment?.idUser?.idUser ??
+      t?.assigment?.idUserId ??
+      (typeof t?.assigment?.idUser === "number" ? t.assigment.idUser : null) ??
+      null,
+    assignedUserName:
+      t?.assigment?.idUser?.userName ?? t?.assigment?.userName ?? null,
+    _raw: t,
+  };
 }
 
 // PATCH /tasks/{taskId}
@@ -160,6 +186,48 @@ export async function updateTask(taskId, payload) {
         msg = (await resp.text()) || msg;
       } catch {}
     }
+    throw new Error(msg);
+  }
+  return resp.json().catch(() => ({}));
+}
+
+// DELETE /users-tasks/{taskId}
+export async function unassignUserFromTask(taskId) {
+  const resp = await fetch(
+    withBase(`/users-tasks/${encodeURIComponent(taskId)}`),
+    {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    }
+  );
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try {
+      msg = (await resp.json())?.message || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+  return resp.text().catch(() => "");
+}
+
+// POST /users-tasks
+export async function assignUserToTask({ taskId, userId }) {
+  const payload = {
+    idUser: { idUser: Number(userId) },
+    idTask: { tasks: Number(taskId) },
+  };
+  const resp = await fetch(withBase("/users-tasks"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try {
+      msg = (await resp.json())?.message || msg;
+    } catch {}
     throw new Error(msg);
   }
   return resp.json().catch(() => ({}));

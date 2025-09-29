@@ -36,7 +36,6 @@ export default function FirstForm({ title = "Form title", isLogin = true }) {
   }) => {
     const email = username.trim();
 
-    // ----- REGISTRO -----
     if (!isLogin) {
       if (password !== confirmPassword) {
         setError("confirmPassword", {
